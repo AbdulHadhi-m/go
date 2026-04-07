@@ -1,3 +1,4 @@
+import asyncHandler from "express-async-handler";
 import bcrypt from "bcryptjs";
 import User from "../models/userModel.js";
 import generateToken from "../utils/generateToken.js";
@@ -11,169 +12,148 @@ const setTokenCookie = (res, token) => {
   });
 };
 
-export const registerUser = async (req, res) => {
-  try {
-    const { firstName, lastName, email, password } = req.body;
+// @desc Register user
+// @route POST /api/auth/register
+// @access Public
+export const registerUser = asyncHandler(async (req, res) => {
+  const { firstName, lastName, email, password } = req.body;
 
-    if (!firstName || !email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Please fill all required fields",
-      });
-    }
-
-    const existingUser = await User.findOne({ email });
-
-    if (existingUser) {
-      if (existingUser.authProvider === "google") {
-        return res.status(400).json({
-          success: false,
-          message: "This email is already registered with Google login",
-        });
-      }
-
-      return res.status(400).json({
-        success: false,
-        message: "User already exists",
-      });
-    }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    const user = await User.create({
-      firstName,
-      lastName,
-      email,
-      password: hashedPassword,
-      authProvider: "local",
-    });
-
-    const token = generateToken(user._id);
-    setTokenCookie(res, token);
-
-    return res.status(201).json({
-      success: true,
-      message: "User registered successfully",
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        avatar: user.avatar,
-        authProvider: user.authProvider,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+  if (!firstName || !email || !password) {
+    res.status(400);
+    throw new Error("Please provide all required fields");
   }
-};
 
-export const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+  const existingUser = await User.findOne({ email });
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: "Email and password are required",
-      });
-    }
-
-    const user = await User.findOne({ email });
-
-    if (!user) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    if (user.authProvider === "google") {
-      return res.status(400).json({
-        success: false,
-        message: "Please continue with Google login",
-      });
-    }
-
-    if (user.isBlocked) {
-      return res.status(403).json({
-        success: false,
-        message: "Your account is blocked",
-      });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password || "");
-
-    if (!isMatch) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid email or password",
-      });
-    }
-
-    const token = generateToken(user._id);
-    setTokenCookie(res, token);
-
-    return res.status(200).json({
-      success: true,
-      message: "Login successful",
-      user: {
-        _id: user._id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        avatar: user.avatar,
-        authProvider: user.authProvider,
-        role: user.role,
-      },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      success: false,
-      message: error.message,
-    });
+  if (existingUser) {
+    res.status(400);
+    throw new Error("User already exists");
   }
-};
 
-export const getMe = async (req, res) => {
-  return res.status(200).json({
-    success: true,
-    user: req.user,
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
+  const user = await User.create({
+    firstName,
+    lastName,
+    email,
+    password: hashedPassword,
   });
-};
 
-export const logoutUser = async (req, res) => {
-  // Clear only your JWT cookie.
-  // Do NOT call req.logout() because you are not using Passport session auth here.
+  if (!user) {
+    res.status(400);
+    throw new Error("Failed to register user");
+  }
+
+  const token = generateToken(user._id);
+  setTokenCookie(res, token);
+
+  res.status(201).json({
+    success: true,
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      avatar: user.avatar || "",
+      token,
+    },
+  });
+});
+
+// @desc Login user
+// @route POST /api/auth/login
+// @access Public
+export const loginUser = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    res.status(400);
+    throw new Error("Please enter email and password");
+  }
+
+  const user = await User.findOne({ email });
+
+  if (!user) {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
+
+  if (user.isBlocked) {
+    res.status(403);
+    throw new Error("Your account is blocked");
+  }
+
+  const isMatch = await bcrypt.compare(password, user.password);
+
+  if (!isMatch) {
+    res.status(401);
+    throw new Error("Invalid email or password");
+  }
+
+  const token = generateToken(user._id);
+  setTokenCookie(res, token);
+
+  res.status(200).json({
+    success: true,
+    user: {
+      _id: user._id,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      email: user.email,
+      avatar: user.avatar || "",
+      token,
+    },
+  });
+});
+
+// @desc Logout user
+// @route POST /api/auth/logout
+// @access Public
+export const logoutUser = asyncHandler(async (req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
     expires: new Date(0),
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
   });
 
-  return res.status(200).json({
+  res.status(200).json({
     success: true,
     message: "Logged out successfully",
   });
-};
+});
 
-export const googleAuthSuccess = async (req, res) => {
-  try {
-    const token = generateToken(req.user._id);
-    setTokenCookie(res, token);
+// @desc Get current user
+// @route GET /api/auth/me
+// @access Private
+export const getMe = asyncHandler(async (req, res) => {
+  res.status(200).json({
+    success: true,
+    user: req.user,
+  });
+});
 
-    return res.redirect(process.env.CLIENT_URL);
-  } catch (error) {
-    return res.redirect(`${process.env.CLIENT_URL}/login`);
-  }
-};
+// @desc Google auth success
+// @route GET /api/auth/google/callback
+// @access Public
+export const googleAuthSuccess = asyncHandler(async (req, res) => {
+  const token = generateToken(req.user._id);
+  setTokenCookie(res, token);
 
-export const googleAuthFailure = async (req, res) => {
-  return res.redirect(`${process.env.CLIENT_URL}/login`);
-};
+  const frontendUrl = process.env.CLIENT_URL || "http://localhost:5173";
+
+  res.redirect(
+    `${frontendUrl}/login-success?token=${token}&email=${encodeURIComponent(
+      req.user.email
+    )}&firstName=${encodeURIComponent(req.user.firstName || "")}&lastName=${encodeURIComponent(req.user.lastName || "")}`
+  );
+});
+
+// @desc Google auth failure
+// @route GET /api/auth/google/failure
+// @access Public
+export const googleAuthFailure = asyncHandler(async (req, res) => {
+  res.status(401).json({
+    success: false,
+    message: "Google authentication failed",
+  });
+});

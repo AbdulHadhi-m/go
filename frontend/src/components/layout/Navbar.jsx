@@ -8,7 +8,7 @@ import {
 
 const navItems = [
   { label: "Home", to: "/" },
-  { label: "Search", to: "/search" },
+  { label: "Search", to: "/search-results" },
   { label: "My Bookings", to: "/my-bookings" },
 ];
 

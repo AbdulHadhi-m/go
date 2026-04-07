@@ -1,37 +1,286 @@
+import { useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import MainLayout from "../components/layout/MainLayout";
-
-const bookings = [1, 2, 3];
+import {
+  cancelBooking,
+  clearBookingMessage,
+  getMyBookings,
+} from "../features/bookings/bookingSlice";
+import toast from "react-hot-toast";
 
 export default function MyBookingsPage() {
+  const dispatch = useDispatch();
+
+  const {
+    bookings = [],
+    loading = false,
+    error = null,
+    successMessage = "",
+  } = useSelector((state) => state.bookings || {});
+
+  useEffect(() => {
+    dispatch(getMyBookings());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (error) {
+      toast.error(error);
+      dispatch(clearBookingMessage());
+    }
+
+    if (successMessage) {
+      toast.success(successMessage);
+      dispatch(clearBookingMessage());
+    }
+  }, [error, successMessage, dispatch]);
+
+  const handleCancel = (bookingId) => {
+    const confirmCancel = window.confirm(
+      "Are you sure you want to cancel this booking?"
+    );
+
+    if (confirmCancel) {
+      dispatch(cancelBooking(bookingId));
+    }
+  };
+
+  const handleDownloadTicket = (booking) => {
+    const ticketWindow = window.open("", "_blank", "width=900,height=700");
+
+    if (!ticketWindow) {
+      toast.error("Popup blocked. Please allow popups.");
+      return;
+    }
+
+    const ticketHtml = `
+      <html>
+        <head>
+          <title>Ticket - ${booking._id}</title>
+          <style>
+            body {
+              font-family: Arial, sans-serif;
+              padding: 30px;
+              color: #1e293b;
+            }
+            .ticket {
+              max-width: 700px;
+              margin: auto;
+              border: 1px solid #ddd;
+              border-radius: 20px;
+              padding: 24px;
+            }
+            .title {
+              font-size: 28px;
+              font-weight: bold;
+              margin-bottom: 16px;
+              color: #6d28d9;
+            }
+            .row {
+              margin: 10px 0;
+              font-size: 16px;
+            }
+            .label {
+              font-weight: bold;
+            }
+            .status {
+              display: inline-block;
+              padding: 6px 12px;
+              border-radius: 999px;
+              font-size: 13px;
+              font-weight: bold;
+              text-transform: capitalize;
+              background: ${
+                booking.bookingStatus === "cancelled" ? "#fee2e2" : "#dcfce7"
+              };
+              color: ${
+                booking.bookingStatus === "cancelled" ? "#dc2626" : "#16a34a"
+              };
+            }
+            .footer {
+              margin-top: 24px;
+              font-size: 14px;
+              color: #64748b;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="ticket">
+            <div class="title">GoPath Bus Ticket</div>
+
+            <div class="row"><span class="label">Route:</span> ${
+              booking.trip?.from || "-"
+            } → ${booking.trip?.to || "-"}</div>
+
+            <div class="row"><span class="label">Bus:</span> ${
+              booking.trip?.busName || "Bus Name"
+            }</div>
+
+            <div class="row"><span class="label">Seats:</span> ${
+              booking.seats?.join(", ") || "-"
+            }</div>
+
+            <div class="row"><span class="label">Amount:</span> ₹${
+              booking.totalAmount || 0
+            }</div>
+
+            <div class="row"><span class="label">Payment:</span> ${
+              booking.paymentStatus || "-"
+            }</div>
+
+            <div class="row"><span class="label">Status:</span> 
+              <span class="status">${booking.bookingStatus || "-"}</span>
+            </div>
+
+            <div class="row"><span class="label">Date:</span> ${
+              booking.trip?.journeyDate
+                ? new Date(booking.trip.journeyDate).toLocaleDateString()
+                : booking.createdAt
+                ? new Date(booking.createdAt).toLocaleDateString()
+                : "-"
+            }</div>
+
+            <div class="row"><span class="label">Departure Time:</span> ${
+              booking.trip?.departureTime || "-"
+            }</div>
+
+            <div class="row"><span class="label">Booking ID:</span> ${
+              booking._id
+            }</div>
+
+            <div class="footer">
+              Thank you for booking with GoPath.
+            </div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+            }
+          </script>
+        </body>
+      </html>
+    `;
+
+    ticketWindow.document.open();
+    ticketWindow.document.write(ticketHtml);
+    ticketWindow.document.close();
+  };
+
   return (
     <MainLayout>
       <section className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-extrabold">My Bookings</h1>
-            <p className="mt-2 text-slate-600">Manage upcoming and completed journeys.</p>
+            <h1 className="text-3xl font-extrabold text-slate-900">
+              My Bookings
+            </h1>
+            <p className="mt-2 text-slate-600">
+              Manage upcoming and completed journeys.
+            </p>
           </div>
+
           <div className="rounded-full bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700">
-            3 Total Tickets
+            {bookings.length} Total Tickets
           </div>
         </div>
 
-        <div className="mt-8 space-y-5">
-          {bookings.map((item) => (
-            <div key={item} className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-violet-100">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <h2 className="text-xl font-bold">Cochin → Bangalore</h2>
-                  <p className="mt-1 text-sm text-slate-500">Seat 7, 8 · Premium Travels</p>
-                </div>
-                <div className="flex gap-3">
-                  <button className="rounded-2xl border border-violet-200 px-4 py-2 font-semibold text-violet-700">View Ticket</button>
-                  <button className="rounded-2xl bg-violet-700 px-4 py-2 font-semibold text-white">Download</button>
+        {loading ? (
+          <div className="mt-8 rounded-[2rem] bg-white p-6 text-center shadow-sm ring-1 ring-violet-100">
+            <p className="text-slate-600">Loading bookings...</p>
+          </div>
+        ) : error ? (
+          <div className="mt-8 rounded-[2rem] bg-white p-6 text-center shadow-sm ring-1 ring-red-100">
+            <h2 className="text-xl font-bold text-red-600">
+              Failed to load bookings
+            </h2>
+            <p className="mt-2 text-slate-600">{error}</p>
+
+            <button
+              onClick={() => dispatch(getMyBookings())}
+              className="mt-4 rounded-2xl bg-violet-700 px-5 py-3 font-semibold text-white"
+            >
+              Retry
+            </button>
+          </div>
+        ) : bookings.length === 0 ? (
+          <div className="mt-8 rounded-[2rem] bg-white p-6 text-center shadow-sm ring-1 ring-violet-100">
+            <h2 className="text-xl font-bold text-slate-900">
+              No bookings found
+            </h2>
+            <p className="mt-2 text-slate-600">
+              Your booked tickets will appear here.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-8 space-y-5">
+            {bookings.map((booking) => (
+              <div
+                key={booking._id}
+                className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-violet-100"
+              >
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h2 className="text-xl font-bold text-slate-900">
+                        {booking.trip?.from || "From"} → {booking.trip?.to || "To"}
+                      </h2>
+
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${
+                          booking.bookingStatus === "cancelled"
+                            ? "bg-red-100 text-red-600"
+                            : "bg-emerald-100 text-emerald-600"
+                        }`}
+                      >
+                        {booking.bookingStatus}
+                      </span>
+                    </div>
+
+                    <p className="mt-2 text-sm text-slate-500">
+                      Seats: {booking.seats?.join(", ") || "-"} ·{" "}
+                      {booking.trip?.busName || "Bus Name"}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Amount: ₹{booking.totalAmount}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Payment: {booking.paymentStatus}
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
+                      Date:{" "}
+                      {booking.trip?.journeyDate
+                        ? new Date(booking.trip.journeyDate).toLocaleDateString()
+                        : booking.createdAt
+                        ? new Date(booking.createdAt).toLocaleDateString()
+                        : "-"}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      onClick={() => handleDownloadTicket(booking)}
+                      className="rounded-2xl bg-violet-700 px-4 py-2 font-semibold text-white transition hover:bg-violet-800"
+                    >
+                      Download Ticket
+                    </button>
+
+                    {booking.bookingStatus !== "cancelled" && (
+                      <button
+                        onClick={() => handleCancel(booking._id)}
+                        className="rounded-2xl bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
+                      >
+                        Cancel
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
     </MainLayout>
   );
