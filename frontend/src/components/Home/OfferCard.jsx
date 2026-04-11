@@ -1,6 +1,6 @@
 export default function OfferCard({ offer }) {
   return (
-    <div className="min-w-[280px] rounded-[2rem] border border-violet-100 bg-white p-4 shadow-sm">
+    <div className="min-w-[280px] rounded-[2rem] border border-red-100 bg-white p-4 shadow-sm">
       <span className="inline-block rounded-full bg-slate-700 px-3 py-1 text-xs font-semibold text-white">
         {offer.type}
       </span>

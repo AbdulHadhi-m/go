@@ -13,7 +13,7 @@ export default function Input({
       ) : null}
 
       <input
-        className={`w-full rounded-2xl border border-violet-100 px-4 py-3 outline-none transition focus:border-violet-400 ${className}`}
+        className={`w-full rounded-2xl border border-red-100 px-4 py-3 outline-none transition focus:border-red-400 ${className}`}
         {...props}
       />
 

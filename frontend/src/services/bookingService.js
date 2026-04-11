@@ -6,8 +6,8 @@ export const createBookingAPI = async (bookingData) => {
 };
 
 export const getMyBookingsAPI = async () => {
-  const response = await axiosInstance.get(`/bookings/my?_t=${Date.now()}`);
-  return response.data?.bookings || response.data || [];
+  const response = await axiosInstance.get("/bookings/my");
+  return response.data;
 };
 
 export const cancelBookingAPI = async (bookingId) => {

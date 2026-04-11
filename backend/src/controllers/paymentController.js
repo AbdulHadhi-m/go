@@ -4,6 +4,7 @@ import razorpay from "../config/razorpay.js";
 import Booking from "../models/bookingModel.js";
 import Payment from "../models/paymentModel.js";
 import Trip from "../models/tripModel.js";
+import Coupon from "../models/couponModel.js";
 
 // POST /api/payments/create-order
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
@@ -36,6 +37,14 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     seats,
     totalAmount,
     passengerDetails,
+    couponCode = null,
+    discountAmount = 0,
+    originalAmount = totalAmount,
+    finalAmount = totalAmount,
+    offerApplied = "",
+    offerType = "none",
+    offerMeta = {},
+    firstBookingOfferUsed = false,
   } = req.body;
 
   if (
@@ -78,6 +87,16 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     trip: tripId,
     seats,
     totalAmount,
+    originalAmount,
+    finalAmount,
+    discountAmount,
+    couponCode: couponCode ? String(couponCode).toUpperCase() : null,
+    offerApplied,
+    offerType,
+    offerMeta,
+    firstBookingOfferUsed,
+    couponUsageCounted: false,
+    paidAmount: totalAmount,
     passengerDetails: passengerDetails || [],
     bookingStatus: "confirmed",
     paymentStatus: "paid",
@@ -96,6 +115,18 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     transactionId: razorpay_payment_id,
     orderId: razorpay_order_id,
   });
+
+  if (booking.couponCode && booking.offerType === "coupon" && !booking.couponUsageCounted) {
+    await Coupon.findOneAndUpdate(
+      {
+        code: booking.couponCode,
+        ...(booking.offerMeta?.couponId ? { _id: booking.offerMeta.couponId } : {}),
+      },
+      { $inc: { usedCount: 1 } }
+    );
+    booking.couponUsageCounted = true;
+    await booking.save();
+  }
 
   const populatedBooking = await Booking.findById(booking._id)
     .populate("trip")

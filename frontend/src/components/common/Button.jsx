@@ -9,8 +9,8 @@ export default function Button({
     "inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm font-semibold transition";
 
   const variants = {
-    primary: "bg-violet-700 text-white hover:bg-violet-800",
-    secondary: "border border-violet-200 bg-white text-violet-700 hover:bg-violet-50",
+    primary: "bg-red-700 text-white hover:bg-red-800",
+    secondary: "border border-red-200 bg-white text-red-700 hover:bg-red-50",
     ghost: "bg-transparent text-slate-700 hover:bg-slate-100",
     danger: "bg-red-500 text-white hover:bg-red-600",
   };

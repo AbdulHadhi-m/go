@@ -106,7 +106,7 @@ export default function RegisterForm() {
           placeholder="First name"
           value={formData.firstName}
           onChange={handleChange}
-          className="rounded-2xl border border-violet-100 px-4 py-3"
+          className="rounded-2xl border border-red-100 px-4 py-3"
         />
 
         <input
@@ -114,7 +114,7 @@ export default function RegisterForm() {
           placeholder="Last name"
           value={formData.lastName}
           onChange={handleChange}
-          className="rounded-2xl border border-violet-100 px-4 py-3"
+          className="rounded-2xl border border-red-100 px-4 py-3"
         />
 
         <input
@@ -123,7 +123,7 @@ export default function RegisterForm() {
           placeholder="Email"
           value={formData.email}
           onChange={handleChange}
-          className="md:col-span-2 rounded-2xl border border-violet-100 px-4 py-3"
+          className="md:col-span-2 rounded-2xl border border-red-100 px-4 py-3"
         />
 
         <input
@@ -132,7 +132,7 @@ export default function RegisterForm() {
           placeholder="Password"
           value={formData.password}
           onChange={handleChange}
-          className="md:col-span-2 rounded-2xl border border-violet-100 px-4 py-3"
+          className="md:col-span-2 rounded-2xl border border-red-100 px-4 py-3"
         />
 
         <input
@@ -141,21 +141,21 @@ export default function RegisterForm() {
           placeholder="Confirm password"
           value={formData.confirmPassword}
           onChange={handleChange}
-          className="md:col-span-2 rounded-2xl border border-violet-100 px-4 py-3"
+          className="md:col-span-2 rounded-2xl border border-red-100 px-4 py-3"
         />
 
         <label className="md:col-span-2 flex items-start gap-3 text-sm text-slate-600">
           <input type="checkbox" className="mt-1 rounded" />
           <span>
             I agree to{" "}
-            <span className="text-violet-700 font-semibold">Terms</span> and{" "}
-            <span className="text-violet-700 font-semibold">Privacy Policy</span>
+            <span className="text-red-700 font-semibold">Terms</span> and{" "}
+            <span className="text-red-700 font-semibold">Privacy Policy</span>
           </span>
         </label>
 
         <button
           disabled={loading}
-          className="md:col-span-2 rounded-2xl bg-violet-700 px-5 py-3 text-white hover:bg-violet-800 disabled:opacity-60"
+          className="md:col-span-2 rounded-2xl bg-red-700 px-5 py-3 text-white hover:bg-red-800 disabled:opacity-60"
         >
           {loading ? "Creating Account..." : "Create Account"}
         </button>
@@ -163,7 +163,7 @@ export default function RegisterForm() {
 
       <p className="mt-6 text-center text-sm text-slate-500">
         Already have an account?{" "}
-        <Link to="/login" className="text-violet-700 font-semibold">
+        <Link to="/login" className="text-red-700 font-semibold">
           Sign in
         </Link>
       </p>

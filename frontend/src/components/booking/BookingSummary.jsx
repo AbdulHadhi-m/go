@@ -5,7 +5,7 @@ export default function BookingSummary({
   onContinue,
 }) {
   return (
-    <aside className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-violet-100">
+    <aside className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-red-100">
       <h2 className="text-2xl font-bold text-slate-900">Booking Summary</h2>
 
       <div className="mt-5 space-y-4 text-sm text-slate-600">
@@ -28,7 +28,7 @@ export default function BookingSummary({
       <button
         type="button"
         onClick={onContinue}
-        className="mt-8 w-full rounded-2xl bg-violet-700 px-5 py-3 font-semibold text-white"
+        className="mt-8 w-full rounded-2xl bg-red-700 px-5 py-3 font-semibold text-white"
       >
         Continue to Checkout
       </button>

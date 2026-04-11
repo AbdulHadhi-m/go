@@ -52,7 +52,7 @@ export default function SeatSelectionPage() {
   if (loading && !trip) {
     return (
       <MainLayout>
-        <section className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50 px-4 py-10 md:px-6">
+        <section className="min-h-screen bg-gradient-to-b from-red-50 via-white to-red-50 px-4 py-10 md:px-6">
           <div className="mx-auto max-w-7xl rounded-[2rem] bg-white p-8 shadow-xl">
             <p className="text-slate-600">Loading seats...</p>
           </div>
@@ -64,7 +64,7 @@ export default function SeatSelectionPage() {
   if (error) {
     return (
       <MainLayout>
-        <section className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50 px-4 py-10 md:px-6">
+        <section className="min-h-screen bg-gradient-to-b from-red-50 via-white to-red-50 px-4 py-10 md:px-6">
           <div className="mx-auto max-w-7xl rounded-[2rem] bg-white p-8 shadow-xl">
             <p className="text-red-600">{error}</p>
           </div>
@@ -75,9 +75,9 @@ export default function SeatSelectionPage() {
 
   return (
     <MainLayout>
-      <section className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50">
+      <section className="min-h-screen bg-gradient-to-b from-red-50 via-white to-red-50">
         <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
-          <div className="mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-r from-violet-700 via-indigo-700 to-purple-700 p-6 text-white shadow-xl shadow-violet-200">
+          <div className="mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-r from-red-700 via-red-700 to-red-700 p-6 text-white shadow-xl shadow-red-200">
             <h1 className="text-3xl font-extrabold md:text-4xl">
               Select Your Seats
             </h1>
@@ -88,14 +88,14 @@ export default function SeatSelectionPage() {
 
           <div className="grid gap-6 lg:grid-cols-[1.3fr_0.7fr]">
             {/* Seat layout */}
-            <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100">
+            <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
               <div className="mb-6 flex flex-wrap gap-4 text-sm">
                 <div className="inline-flex items-center gap-2">
                   <span className="h-4 w-4 rounded bg-slate-200" />
                   Available
                 </div>
                 <div className="inline-flex items-center gap-2">
-                  <span className="h-4 w-4 rounded bg-violet-600" />
+                  <span className="h-4 w-4 rounded bg-red-600" />
                   Selected
                 </div>
                 <div className="inline-flex items-center gap-2">
@@ -118,8 +118,8 @@ export default function SeatSelectionPage() {
                         isBooked
                           ? "cursor-not-allowed border-rose-200 bg-rose-400 text-white"
                           : isSelected
-                          ? "border-violet-600 bg-violet-600 text-white shadow-lg shadow-violet-200"
-                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-violet-300 hover:bg-violet-50"
+                          ? "border-red-600 bg-red-600 text-white shadow-lg shadow-red-200"
+                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-red-300 hover:bg-red-50"
                       }`}
                     >
                       <Armchair size={18} />
@@ -132,7 +132,7 @@ export default function SeatSelectionPage() {
 
             {/* Summary */}
             <div className="space-y-6">
-              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100">
+              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
                 <h3 className="text-xl font-bold text-slate-900">
                   Booking Summary
                 </h3>
@@ -169,7 +169,7 @@ export default function SeatSelectionPage() {
                   </div>
                 </div>
 
-                <div className="mt-6 rounded-[1.5rem] bg-gradient-to-br from-violet-600 to-indigo-700 p-5 text-white">
+                <div className="mt-6 rounded-[1.5rem] bg-gradient-to-br from-red-600 to-red-700 p-5 text-white">
                   <p className="text-sm text-white/80">Total Amount</p>
                   <h4 className="mt-2 text-3xl font-extrabold">
                     ₹{totalAmount}
@@ -186,14 +186,14 @@ export default function SeatSelectionPage() {
       },
     })
   }
-  className="mt-5 flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-white px-4 py-3 font-semibold text-violet-700 transition hover:bg-violet-50 disabled:cursor-not-allowed disabled:opacity-60"
+  className="mt-5 flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-white px-4 py-3 font-semibold text-red-700 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
 >
   Continue Booking
 </button>
                 </div>
               </div>
 
-              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100">
+              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
                 <p className="inline-flex items-center gap-2 font-semibold text-slate-900">
                   <CheckCircle2 size={18} className="text-emerald-600" />
                   Premium journey

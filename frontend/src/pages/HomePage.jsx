@@ -11,11 +11,11 @@ export default function HomePage() {
   return (
     <MainLayout>
       <HeroSection />
-      <OffersSection />
+      {/* <OffersSection /> */}
+      <GovernmentBusesSection />
       <PopularRoutesSection />
       <InfoContentSection />
-      <StatsHighlightSection />
-      <GovernmentBusesSection />
+      {/* <StatsHighlightSection /> */}
       <FAQSection />
     </MainLayout>
   );

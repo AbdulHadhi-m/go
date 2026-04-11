@@ -47,3 +47,23 @@ export const protect = async (req, res, next) => {
     });
   }
 };
+
+export const adminOnly = (req, res, next) => {
+  if (req.user?.role === "admin") {
+    return next();
+  }
+  return res.status(403).json({
+    success: false,
+    message: "Admin access required",
+  });
+};
+
+export const operatorOnly = (req, res, next) => {
+  if (req.user?.role === "operator" || req.user?.role === "admin") {
+    return next();
+  }
+  return res.status(403).json({
+    success: false,
+    message: "Operator access required",
+  });
+};

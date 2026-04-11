@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import {
+  ArrowLeft,
   Bus,
   CalendarDays,
   Clock3,
@@ -23,16 +24,46 @@ export default function TripDetailsPage() {
 
   const { trip, loading, error } = useSelector((state) => state.trips || {});
 
+  const searchResultsHref = useMemo(() => {
+    if (!trip) return "/search-results";
+    const params = new URLSearchParams();
+    if (trip.from) params.set("from", trip.from);
+    if (trip.to) params.set("to", trip.to);
+    if (trip.journeyDate) {
+      const d = new Date(trip.journeyDate);
+      if (!Number.isNaN(d.getTime())) {
+        params.set("date", d.toISOString().slice(0, 10));
+      }
+    }
+    const q = params.toString();
+    return q ? `/search-results?${q}` : "/search-results";
+  }, [trip]);
+
   useEffect(() => {
     dispatch(getTripById(id));
   }, [dispatch, id]);
 
+  const backToSearchClassName =
+    "inline-flex h-11 w-11 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-700 shadow-sm ring-1 ring-slate-200/60 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600";
+
   if (loading) {
     return (
       <MainLayout>
-        <section className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50 px-4 py-10 md:px-6">
-          <div className="mx-auto max-w-7xl rounded-[2rem] bg-white p-8 shadow-xl">
-            <p className="text-slate-600">Loading trip details...</p>
+        <section className="min-h-screen bg-gradient-to-b from-red-50 via-white to-red-50 px-4 py-10 md:px-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-6">
+              <Link
+                to="/search-results"
+                className={backToSearchClassName}
+                aria-label="Back to search results"
+                title="Back to search results"
+              >
+                <ArrowLeft size={22} strokeWidth={2.25} />
+              </Link>
+            </div>
+            <div className="rounded-[2rem] bg-white p-8 shadow-xl">
+              <p className="text-slate-600">Loading trip details...</p>
+            </div>
           </div>
         </section>
       </MainLayout>
@@ -42,9 +73,21 @@ export default function TripDetailsPage() {
   if (error || !trip) {
     return (
       <MainLayout>
-        <section className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50 px-4 py-10 md:px-6">
-          <div className="mx-auto max-w-7xl rounded-[2rem] bg-white p-8 shadow-xl">
-            <p className="text-red-600">{error || "Trip not found"}</p>
+        <section className="min-h-screen bg-gradient-to-b from-red-50 via-white to-red-50 px-4 py-10 md:px-6">
+          <div className="mx-auto max-w-7xl">
+            <div className="mb-6">
+              <Link
+                to="/search-results"
+                className={backToSearchClassName}
+                aria-label="Back to search results"
+                title="Back to search results"
+              >
+                <ArrowLeft size={22} strokeWidth={2.25} />
+              </Link>
+            </div>
+            <div className="rounded-[2rem] bg-white p-8 shadow-xl">
+              <p className="text-red-600">{error || "Trip not found"}</p>
+            </div>
           </div>
         </section>
       </MainLayout>
@@ -53,12 +96,23 @@ export default function TripDetailsPage() {
 
   return (
     <MainLayout>
-      <section className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50">
+      <section className="min-h-screen bg-gradient-to-b from-red-50 via-white to-red-50">
         <div className="mx-auto max-w-7xl px-4 py-8 md:px-6 md:py-10">
+          <div className="mb-6">
+            <Link
+              to={searchResultsHref}
+              className={backToSearchClassName}
+              aria-label="Back to search results"
+              title="Back to search results"
+            >
+              <ArrowLeft size={22} strokeWidth={2.25} />
+            </Link>
+          </div>
+
           <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
             {/* Left */}
             <div className="space-y-6">
-              <div className="overflow-hidden rounded-[2rem] bg-gradient-to-r from-violet-700 via-indigo-700 to-purple-700 p-7 text-white shadow-xl shadow-violet-200">
+              <div className="overflow-hidden rounded-[2rem] bg-gradient-to-r from-red-700 via-red-700 to-red-700 p-7 text-white shadow-xl shadow-red-200">
                 <div className="mb-4 flex flex-wrap items-center gap-3">
                   <span className="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold backdrop-blur">
                     {trip.busType}
@@ -85,7 +139,7 @@ export default function TripDetailsPage() {
                 </div>
               </div>
 
-              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100">
+              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
                 <h2 className="text-xl font-bold text-slate-900">
                   Travel Timeline
                 </h2>
@@ -96,7 +150,7 @@ export default function TripDetailsPage() {
                       Departure
                     </p>
                     <p className="mt-2 inline-flex items-center gap-2 text-xl font-bold text-slate-900">
-                      <Clock3 size={18} className="text-violet-600" />
+                      <Clock3 size={18} className="text-red-600" />
                       {trip.departureTime}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">{trip.from}</p>
@@ -107,7 +161,7 @@ export default function TripDetailsPage() {
                       Arrival
                     </p>
                     <p className="mt-2 inline-flex items-center gap-2 text-xl font-bold text-slate-900">
-                      <Clock3 size={18} className="text-violet-600" />
+                      <Clock3 size={18} className="text-red-600" />
                       {trip.arrivalTime}
                     </p>
                     <p className="mt-1 text-sm text-slate-500">{trip.to}</p>
@@ -118,36 +172,36 @@ export default function TripDetailsPage() {
                       Journey Date
                     </p>
                     <p className="mt-2 inline-flex items-center gap-2 text-xl font-bold text-slate-900">
-                      <CalendarDays size={18} className="text-violet-600" />
+                      <CalendarDays size={18} className="text-red-600" />
                       {trip.journeyDate
-                        ? new Date(trip.journeyDate).toLocaleDateString()
+                        ? new Date(trip.journeyDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                         : "N/A"}
                     </p>
                   </div>
                 </div>
               </div>
 
-              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100">
+              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
                 <h2 className="text-xl font-bold text-slate-900">Amenities</h2>
 
                 <div className="mt-5 flex flex-wrap gap-3">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
                     <Snowflake size={16} />
                     AC
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
                     <Wifi size={16} />
                     WiFi
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
                     <Zap size={16} />
                     Charging Port
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
                     <ShieldCheck size={16} />
                     Safe Travel
                   </div>
-                  <div className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-4 py-2 text-sm font-medium text-violet-700">
+                  <div className="inline-flex items-center gap-2 rounded-full bg-red-50 px-4 py-2 text-sm font-medium text-red-700">
                     <Bus size={16} />
                     Premium Coach
                   </div>
@@ -157,8 +211,8 @@ export default function TripDetailsPage() {
 
             {/* Right */}
             <div className="space-y-6">
-              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100">
-                <div className="rounded-[1.75rem] bg-gradient-to-br from-violet-600 to-indigo-700 p-6 text-white shadow-lg">
+              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
+                <div className="rounded-[1.75rem] bg-gradient-to-br from-red-600 to-red-700 p-6 text-white shadow-lg">
                   <p className="text-sm text-white/80">Starting from</p>
                   <h3 className="mt-2 text-4xl font-extrabold">₹{trip.fare}</h3>
                   <p className="mt-2 text-sm text-white/80">
@@ -167,7 +221,7 @@ export default function TripDetailsPage() {
 
                   <button
                     onClick={() => navigate(`/trip/${trip._id}/seats`)}
-                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-white px-5 py-3 font-semibold text-violet-700 transition hover:bg-violet-50"
+                    className="mt-6 flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-white px-5 py-3 font-semibold text-red-700 transition hover:bg-red-50"
                   >
                     <Ticket size={18} />
                     View Seats
@@ -175,7 +229,7 @@ export default function TripDetailsPage() {
                 </div>
               </div>
 
-              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100">
+              <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100">
                 <h3 className="text-lg font-bold text-slate-900">
                   Why choose this bus?
                 </h3>

@@ -42,8 +42,7 @@ export const cancelBooking = createAsyncThunk(
   "bookings/cancelBooking",
   async (bookingId, thunkAPI) => {
     try {
-      const response = await cancelBookingAPI(bookingId);
-      return response.booking;
+      return await cancelBookingAPI(bookingId);
     } catch (error) {
       return thunkAPI.rejectWithValue(
         error.response?.data?.message || error.message
@@ -96,9 +95,12 @@ const bookingSlice = createSlice({
       })
       .addCase(cancelBooking.fulfilled, (state, action) => {
         state.loading = false;
-        state.successMessage = "Booking cancelled successfully";
+        state.successMessage =
+          action.payload?.refundStatus === "pending"
+            ? "Booking cancelled successfully. Refund status set to pending."
+            : "Booking cancelled successfully";
         state.bookings = state.bookings.map((booking) =>
-          booking._id === action.payload._id ? action.payload : booking
+          booking._id === action.payload.booking._id ? action.payload.booking : booking
         );
       })
       .addCase(cancelBooking.rejected, (state, action) => {

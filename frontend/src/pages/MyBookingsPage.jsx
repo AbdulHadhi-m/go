@@ -44,6 +44,13 @@ export default function MyBookingsPage() {
     }
   };
 
+  const getRefundBadgeClass = (status) => {
+    if (status === "pending") return "bg-amber-100 text-amber-700";
+    if (status === "processed") return "bg-emerald-100 text-emerald-700";
+    if (status === "failed") return "bg-red-100 text-red-700";
+    return "bg-slate-100 text-slate-600";
+  };
+
   const handleDownloadTicket = (booking) => {
     const ticketWindow = window.open("", "_blank", "width=900,height=700");
 
@@ -90,10 +97,10 @@ export default function MyBookingsPage() {
               font-weight: bold;
               text-transform: capitalize;
               background: ${
-                booking.bookingStatus === "cancelled" ? "#fee2e2" : "#dcfce7"
+                booking.bookingStatus === "cancelled" ? "#fde9e1" : "#dcfce7"
               };
               color: ${
-                booking.bookingStatus === "cancelled" ? "#dc2626" : "#16a34a"
+                booking.bookingStatus === "cancelled" ? "#d44208" : "#16a34a"
               };
             }
             .footer {
@@ -133,9 +140,9 @@ export default function MyBookingsPage() {
 
             <div class="row"><span class="label">Date:</span> ${
               booking.trip?.journeyDate
-                ? new Date(booking.trip.journeyDate).toLocaleDateString()
+                ? new Date(booking.trip.journeyDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                 : booking.createdAt
-                ? new Date(booking.createdAt).toLocaleDateString()
+                ? new Date(booking.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                 : "-"
             }</div>
 
@@ -179,13 +186,13 @@ export default function MyBookingsPage() {
             </p>
           </div>
 
-          <div className="rounded-full bg-violet-100 px-4 py-2 text-sm font-semibold text-violet-700">
+          <div className="rounded-full bg-red-100 px-4 py-2 text-sm font-semibold text-red-700">
             {bookings.length} Total Tickets
           </div>
         </div>
 
         {loading ? (
-          <div className="mt-8 rounded-[2rem] bg-white p-6 text-center shadow-sm ring-1 ring-violet-100">
+          <div className="mt-8 rounded-[2rem] bg-white p-6 text-center shadow-sm ring-1 ring-red-100">
             <p className="text-slate-600">Loading bookings...</p>
           </div>
         ) : error ? (
@@ -197,13 +204,13 @@ export default function MyBookingsPage() {
 
             <button
               onClick={() => dispatch(getMyBookings())}
-              className="mt-4 rounded-2xl bg-violet-700 px-5 py-3 font-semibold text-white"
+              className="mt-4 rounded-2xl bg-red-700 px-5 py-3 font-semibold text-white"
             >
               Retry
             </button>
           </div>
         ) : bookings.length === 0 ? (
-          <div className="mt-8 rounded-[2rem] bg-white p-6 text-center shadow-sm ring-1 ring-violet-100">
+          <div className="mt-8 rounded-[2rem] bg-white p-6 text-center shadow-sm ring-1 ring-red-100">
             <h2 className="text-xl font-bold text-slate-900">
               No bookings found
             </h2>
@@ -216,7 +223,7 @@ export default function MyBookingsPage() {
             {bookings.map((booking) => (
               <div
                 key={booking._id}
-                className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-violet-100"
+                className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-red-100"
               >
                 <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
                   <div>
@@ -250,19 +257,54 @@ export default function MyBookingsPage() {
                     </p>
 
                     <p className="mt-1 text-sm text-slate-500">
+                      Free cancellation before 24 hrs · 10% charge within 24 hrs
+                      · Cancellation closes 2 hrs before departure
+                    </p>
+
+                    <p className="mt-1 text-sm text-slate-500">
                       Date:{" "}
                       {booking.trip?.journeyDate
-                        ? new Date(booking.trip.journeyDate).toLocaleDateString()
+                        ? new Date(booking.trip.journeyDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                         : booking.createdAt
-                        ? new Date(booking.createdAt).toLocaleDateString()
+                        ? new Date(booking.createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
                         : "-"}
                     </p>
+
+                    {booking.bookingStatus === "cancelled" && (
+                      <>
+                        <p className="mt-1 text-sm text-slate-500">
+                          Cancelled on:{" "}
+                          {booking.cancelledAt
+                            ? new Date(booking.cancelledAt).toLocaleString()
+                            : "-"}
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${getRefundBadgeClass(
+                              booking.refundStatus
+                            )}`}
+                          >
+                            Refund {booking.refundStatus || "not_applicable"}
+                          </span>
+                          {booking.refundAmount > 0 && (
+                            <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                              Refund: ₹{booking.refundAmount}
+                            </span>
+                          )}
+                          {booking.cancellationCharge > 0 && (
+                            <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                              Charge: ₹{booking.cancellationCharge}
+                            </span>
+                          )}
+                        </div>
+                      </>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap gap-3">
                     <button
                       onClick={() => handleDownloadTicket(booking)}
-                      className="rounded-2xl bg-violet-700 px-4 py-2 font-semibold text-white transition hover:bg-violet-800"
+                      className="rounded-2xl bg-red-700 px-4 py-2 font-semibold text-white transition hover:bg-red-800"
                     >
                       Download Ticket
                     </button>
@@ -270,9 +312,10 @@ export default function MyBookingsPage() {
                     {booking.bookingStatus !== "cancelled" && (
                       <button
                         onClick={() => handleCancel(booking._id)}
-                        className="rounded-2xl bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700"
+                        disabled={loading}
+                        className="rounded-2xl bg-red-600 px-4 py-2 font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
                       >
-                        Cancel
+                        {loading ? "Cancelling..." : "Cancel Booking"}
                       </button>
                     )}
                   </div>

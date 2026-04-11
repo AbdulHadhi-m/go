@@ -1,9 +1,10 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
 import MainLayout from "../components/layout/MainLayout";
 import { createBooking } from "../features/bookings/bookingSlice";
+import { applyCoupon, clearCoupon } from "../features/coupon/couponSlice";
 
 export default function CheckoutPage() {
   const location = useLocation();
@@ -12,12 +13,14 @@ export default function CheckoutPage() {
 
   const { user } = useSelector((state) => state.auth || {});
   const { loading } = useSelector((state) => state.bookings || {});
+  const couponState = useSelector((state) => state.coupon || {});
 
   const trip = location.state?.trip;
   const selectedSeats = location.state?.selectedSeats || [];
   const baseFare = location.state?.totalAmount || 0;
 
   const [paymentMethod, setPaymentMethod] = useState("UPI");
+  const [couponCode, setCouponCode] = useState("");
   const [formData, setFormData] = useState({
     fullName: "",
     phone: "",
@@ -28,7 +31,9 @@ export default function CheckoutPage() {
 
   const tax = useMemo(() => Math.round(baseFare * 0.05), [baseFare]);
   const discount = 100;
-  const total = baseFare + tax - discount;
+  const amountBeforeOffer = Math.max(0, baseFare + tax - discount);
+  const offerApplied = couponState.offerType && couponState.offerType !== "none";
+  const total = offerApplied ? couponState.finalAmount : amountBeforeOffer;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -38,13 +43,27 @@ export default function CheckoutPage() {
     }));
   };
 
+  useEffect(() => {
+    dispatch(clearCoupon());
+  }, [dispatch, trip?._id]);
+
+  useEffect(() => {
+    if (!trip?._id || amountBeforeOffer <= 0) return;
+    dispatch(
+      applyCoupon({
+        amount: amountBeforeOffer,
+        tripId: trip._id,
+      })
+    );
+  }, [dispatch, trip?._id, amountBeforeOffer]);
+
   const handlePayNow = async () => {
     if (!trip || selectedSeats.length === 0) {
       toast.error("Trip or seat data is missing");
       return;
     }
 
-    if (!user?.token) {
+    if (!user?._id) {
       toast.error("Please login first");
       navigate("/login");
       return;
@@ -55,10 +74,24 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (Number.isNaN(Number(formData.age)) || Number(formData.age) <= 0) {
+      toast.error("Please enter a valid passenger age");
+      return;
+    }
+
     const bookingData = {
       tripId: trip._id,
       seats: selectedSeats,
       totalAmount: total,
+      originalAmount: amountBeforeOffer,
+      finalAmount: total,
+      discountAmount: couponState.discountAmount || 0,
+      couponCode: couponState.coupon || null,
+      offerApplied: couponState.offerApplied || "",
+      offerType: couponState.offerType || "none",
+      offerMeta: couponState.offerMeta || {},
+      firstBookingOfferUsed: couponState.offerType === "first_booking_auto",
+      paymentMethod,
       passengerDetails: [
         {
           name: formData.fullName,
@@ -71,17 +104,43 @@ export default function CheckoutPage() {
     try {
       await dispatch(createBooking(bookingData)).unwrap();
       toast.success("Booking created successfully");
+      dispatch(clearCoupon());
       navigate("/my-bookings");
     } catch (error) {
       toast.error(error || "Booking failed");
     }
   };
 
+  const handleApplyCoupon = async () => {
+    if (!trip?._id) {
+      toast.error("Trip data missing");
+      return;
+    }
+    try {
+      const response = await dispatch(
+        applyCoupon({
+          code: couponCode.trim() || undefined,
+          amount: amountBeforeOffer,
+          tripId: trip._id,
+        })
+      ).unwrap();
+      toast.success(response.selectedOfferReason || "Offer applied");
+    } catch (error) {
+      toast.error(error || "Unable to apply coupon");
+    }
+  };
+
+  const handleRemoveCoupon = () => {
+    dispatch(clearCoupon());
+    setCouponCode("");
+    toast.success("Offer removed");
+  };
+
   if (!trip) {
     return (
       <MainLayout>
         <section className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-          <div className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-violet-100">
+          <div className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-red-100">
             <p className="text-red-600">No checkout data found.</p>
           </div>
         </section>
@@ -91,9 +150,9 @@ export default function CheckoutPage() {
 
   return (
     <MainLayout>
-      <section className="min-h-screen bg-gradient-to-b from-violet-50 via-white to-indigo-50">
+      <section className="min-h-screen bg-gradient-to-b from-red-50 via-white to-red-50">
         <div className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-          <div className="mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-r from-violet-700 via-indigo-700 to-purple-700 p-6 text-white shadow-xl shadow-violet-200">
+          <div className="mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-r from-red-700 via-red-700 to-red-700 p-6 text-white shadow-xl shadow-red-200">
             <h1 className="text-3xl font-extrabold md:text-4xl">Secure Checkout</h1>
             <p className="mt-2 text-white/85">
               Complete your premium journey booking.
@@ -101,7 +160,7 @@ export default function CheckoutPage() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-            <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100 ring-1 ring-violet-100">
+            <div className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100 ring-1 ring-red-100">
               <h1 className="text-3xl font-extrabold text-slate-900">
                 Passenger Details
               </h1>
@@ -111,28 +170,28 @@ export default function CheckoutPage() {
                   name="fullName"
                   value={formData.fullName}
                   onChange={handleChange}
-                  className="rounded-2xl border border-violet-100 px-4 py-3 outline-none focus:ring-2 focus:ring-violet-200"
+                  className="rounded-2xl border border-red-100 px-4 py-3 outline-none focus:ring-2 focus:ring-red-200"
                   placeholder="Full name"
                 />
                 <input
                   name="phone"
                   value={formData.phone}
                   onChange={handleChange}
-                  className="rounded-2xl border border-violet-100 px-4 py-3 outline-none focus:ring-2 focus:ring-violet-200"
+                  className="rounded-2xl border border-red-100 px-4 py-3 outline-none focus:ring-2 focus:ring-red-200"
                   placeholder="Phone number"
                 />
                 <input
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="rounded-2xl border border-violet-100 px-4 py-3 outline-none focus:ring-2 focus:ring-violet-200"
+                  className="rounded-2xl border border-red-100 px-4 py-3 outline-none focus:ring-2 focus:ring-red-200"
                   placeholder="Email"
                 />
                 <input
                   name="age"
                   value={formData.age}
                   onChange={handleChange}
-                  className="rounded-2xl border border-violet-100 px-4 py-3 outline-none focus:ring-2 focus:ring-violet-200"
+                  className="rounded-2xl border border-red-100 px-4 py-3 outline-none focus:ring-2 focus:ring-red-200"
                   placeholder="Age"
                 />
               </div>
@@ -142,7 +201,7 @@ export default function CheckoutPage() {
                   name="gender"
                   value={formData.gender}
                   onChange={handleChange}
-                  className="w-full rounded-2xl border border-violet-100 px-4 py-3 outline-none focus:ring-2 focus:ring-violet-200"
+                  className="w-full rounded-2xl border border-red-100 px-4 py-3 outline-none focus:ring-2 focus:ring-red-200"
                 >
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
@@ -150,7 +209,7 @@ export default function CheckoutPage() {
                 </select>
               </div>
 
-              <div className="mt-8 rounded-3xl bg-violet-50 p-5">
+              <div className="mt-8 rounded-3xl bg-red-50 p-5">
                 <h2 className="text-lg font-bold text-slate-900">Payment Method</h2>
                 <div className="mt-4 grid gap-3 md:grid-cols-3">
                   <button
@@ -158,8 +217,8 @@ export default function CheckoutPage() {
                      onClick={() => setPaymentMethod("UPI")}
                      className={`rounded-2xl border px-4 py-3 font-semibold ${
                        paymentMethod === "UPI"
-                         ? "border-violet-700 bg-violet-700 text-white"
-                         : "border-violet-200 bg-white text-violet-700"
+                         ? "border-red-700 bg-red-700 text-white"
+                         : "border-red-200 bg-white text-red-700"
                      }`}
                    >
                      UPI
@@ -169,8 +228,8 @@ export default function CheckoutPage() {
                      onClick={() => setPaymentMethod("Card")}
                      className={`rounded-2xl border px-4 py-3 font-semibold ${
                        paymentMethod === "Card"
-                         ? "border-violet-700 bg-violet-700 text-white"
-                         : "border-violet-200 bg-white text-violet-700"
+                         ? "border-red-700 bg-red-700 text-white"
+                         : "border-red-200 bg-white text-red-700"
                      }`}
                    >
                      Card
@@ -180,8 +239,8 @@ export default function CheckoutPage() {
                      onClick={() => setPaymentMethod("Wallet")}
                      className={`rounded-2xl border px-4 py-3 font-semibold ${
                        paymentMethod === "Wallet"
-                         ? "border-violet-700 bg-violet-700 text-white"
-                         : "border-violet-200 bg-white text-violet-700"
+                         ? "border-red-700 bg-red-700 text-white"
+                         : "border-red-200 bg-white text-red-700"
                      }`}
                    >
                      Wallet
@@ -193,8 +252,46 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            <aside className="rounded-[2rem] bg-white p-6 shadow-xl shadow-violet-100 ring-1 ring-violet-100">
+            <aside className="rounded-[2rem] bg-white p-6 shadow-xl shadow-red-100 ring-1 ring-red-100">
               <h2 className="text-2xl font-bold text-slate-900">Fare Summary</h2>
+
+              <div className="mt-4 rounded-2xl bg-red-50 p-3">
+                <p className="text-xs font-semibold text-red-700">
+                  Enter coupon code (optional)
+                </p>
+                <div className="mt-2 flex gap-2">
+                  <input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    placeholder="NEWUSER50"
+                    className="w-full rounded-xl border border-red-200 px-3 py-2 text-sm outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyCoupon}
+                    disabled={couponState.isLoading}
+                    className="rounded-xl bg-red-700 px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  >
+                    {couponState.isLoading ? "..." : "Apply"}
+                  </button>
+                </div>
+                {offerApplied && (
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <span className="text-xs font-medium text-red-700">
+                      {couponState.offerType === "first_booking_auto"
+                        ? "First Booking Offer Applied - 10% OFF"
+                        : `Better Coupon Applied - ₹${couponState.discountAmount} OFF`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleRemoveCoupon}
+                      className="text-xs font-semibold text-rose-600"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                )}
+              </div>
 
               <div className="mt-5 space-y-4 text-sm text-slate-600">
                 <div className="flex justify-between">
@@ -231,6 +328,17 @@ export default function CheckoutPage() {
                   <span>-₹{discount}</span>
                 </div>
 
+                <div className="flex justify-between">
+                  <span>Offer Discount</span>
+                  <span>-₹{couponState.discountAmount || 0}</span>
+                </div>
+
+                {offerApplied && (
+                  <div className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
+                    {couponState.selectedOfferReason}
+                  </div>
+                )}
+
                 <div className="flex justify-between border-t pt-4 text-base font-bold text-slate-900">
                   <span>Total</span>
                   <span>₹{total}</span>
@@ -240,7 +348,7 @@ export default function CheckoutPage() {
               <button
                 onClick={handlePayNow}
                 disabled={loading}
-                className="mt-8 w-full rounded-2xl bg-gradient-to-r from-violet-600 to-indigo-700 px-5 py-3 font-semibold text-white shadow-lg shadow-violet-200 transition hover:from-violet-700 hover:to-indigo-800 disabled:opacity-60"
+                className="mt-8 w-full rounded-2xl bg-gradient-to-r from-red-600 to-red-700 px-5 py-3 font-semibold text-white shadow-lg shadow-red-200 transition hover:from-red-700 hover:to-red-800 disabled:opacity-60"
               >
                 {loading ? "Processing..." : "Pay Now"}
               </button>

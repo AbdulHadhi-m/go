@@ -34,7 +34,7 @@ export default function OffersSection() {
         <h2 className="text-4xl font-extrabold text-slate-900">
           Bus Booking Discount Offers
         </h2>
-        <button className="text-lg font-semibold text-violet-700">
+        <button className="text-lg font-semibold text-red-700">
           View All
         </button>
       </div>

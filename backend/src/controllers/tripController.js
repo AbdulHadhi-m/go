@@ -20,7 +20,7 @@ export const getAllTrips = asyncHandler(async (req, res) => {
   if (date) {
     const start = new Date(date);
     const end = new Date(date);
-    end.setDate(end.getDate() + 1);
+    end.setUTCDate(end.getUTCDate() + 1);
 
     filter.journeyDate = {
       $gte: start,
@@ -28,7 +28,10 @@ export const getAllTrips = asyncHandler(async (req, res) => {
     };
   }
 
-  const trips = await Trip.find(filter).sort({ journeyDate: 1 });
+  const trips = await Trip.find({
+    ...filter,
+    tripStatus: { $ne: "cancelled" },
+  }).sort({ journeyDate: 1 });
   res.json(trips);
 });
 

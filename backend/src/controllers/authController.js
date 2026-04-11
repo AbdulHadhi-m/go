@@ -55,7 +55,9 @@ export const registerUser = asyncHandler(async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      phone: user.phone || "",
       avatar: user.avatar || "",
+      role: user.role,
       token,
     },
   });
@@ -101,7 +103,9 @@ export const loginUser = asyncHandler(async (req, res) => {
       firstName: user.firstName,
       lastName: user.lastName,
       email: user.email,
+      phone: user.phone || "",
       avatar: user.avatar || "",
+      role: user.role,
       token,
     },
   });

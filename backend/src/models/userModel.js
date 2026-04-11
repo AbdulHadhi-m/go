@@ -22,6 +22,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
     },
 
+    phone: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
     password: {
       type: String,
       required: function () {
@@ -49,6 +55,16 @@ const userSchema = new mongoose.Schema(
       type: String,
       enum: ["user", "admin", "operator"],
       default: "user",
+    },
+    operatorApplicationStatus: {
+      type: String,
+      enum: ["none", "pending", "approved", "rejected"],
+      default: "none",
+    },
+    operatorApplicationNote: {
+      type: String,
+      default: "",
+      trim: true,
     },
 
     isBlocked: {

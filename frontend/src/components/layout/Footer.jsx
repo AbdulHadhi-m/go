@@ -2,7 +2,7 @@ import { FaFacebookF, FaInstagram, FaTwitter, FaLinkedinIn } from "react-icons/f
 
 export default function Footer() {
   return (
-    <footer className="mt-16 border-t border-violet-100 bg-white">
+    <footer className="mt-16 border-t border-red-100 bg-white">
       <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
         <div className="grid gap-8 md:grid-cols-4">
           {/* Brand */}
@@ -36,7 +36,7 @@ export default function Footer() {
           {/* Newsletter */}
           <div>
             <h4 className="font-semibold text-slate-900">Newsletter</h4>
-            <div className="mt-3 flex rounded-full border border-violet-100 p-1">
+            <div className="mt-3 flex rounded-full border border-red-100 p-1">
               <input
                 type="email"
                 placeholder="Enter your email"

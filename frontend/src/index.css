@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+/* Brand red: rgb(212, 66, 8) — replaces default Tailwind red scale app-wide */
+@theme {
+  --color-red-50: #fef6f3;
+  --color-red-100: #fde9e1;
+  --color-red-200: #f7cfc0;
+  --color-red-300: #efaa8c;
+  --color-red-400: #e37e54;
+  --color-red-500: rgb(212, 66, 8);
+  --color-red-600: #b83707;
+  --color-red-700: #9a2f06;
+  --color-red-800: #7c2605;
+  --color-red-900: #5e1d04;
+  --color-red-950: #361004;
+
+  /* Match rose-* to same brand (used on some pages for accents) */
+  --color-rose-50: #fef6f3;
+  --color-rose-100: #fde9e1;
+  --color-rose-200: #f7cfc0;
+  --color-rose-300: #efaa8c;
+  --color-rose-400: #e37e54;
+  --color-rose-500: rgb(212, 66, 8);
+  --color-rose-600: #b83707;
+  --color-rose-700: #9a2f06;
+  --color-rose-800: #7c2605;
+  --color-rose-900: #5e1d04;
+  --color-rose-950: #361004;
+}
