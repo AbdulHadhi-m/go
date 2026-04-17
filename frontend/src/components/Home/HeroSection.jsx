@@ -103,7 +103,7 @@ export default function HeroSection() {
       </div>
 
       {/* SEARCH — overlaps hero + area below (classic layout) */}
-      <div className="relative z-50 mx-auto -mt-6 max-w-7xl px-4 sm:-mt-8 md:-mt-12 md:px-6 lg:px-8">
+      <div className="relative z-40 mx-auto -mt-6 max-w-7xl px-4 sm:-mt-8 md:-mt-12 md:px-6 lg:px-8">
         <form
           onSubmit={handleSearch}
           className="rounded-[2rem] bg-white p-4 shadow-xl shadow-slate-200/50 ring-1 ring-slate-200 sm:p-5 md:rounded-[3rem] md:p-6"
