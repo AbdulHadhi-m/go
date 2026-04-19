@@ -53,7 +53,7 @@ export default function Navbar() {
 
   const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(
     displayName
-  )}&background=d44208&color=fff`;
+  )}&background=f97316&color=fff`;
 
   const userAvatar = user?.avatar || fallbackAvatar;
 

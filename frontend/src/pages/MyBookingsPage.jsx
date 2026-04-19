@@ -97,10 +97,10 @@ export default function MyBookingsPage() {
               font-weight: bold;
               text-transform: capitalize;
               background: ${
-                booking.bookingStatus === "cancelled" ? "#fde9e1" : "#dcfce7"
+                booking.bookingStatus === "cancelled" ? "#ffedd5" : "#dcfce7"
               };
               color: ${
-                booking.bookingStatus === "cancelled" ? "#d44208" : "#16a34a"
+                booking.bookingStatus === "cancelled" ? "#f97316" : "#16a34a"
               };
             }
             .footer {

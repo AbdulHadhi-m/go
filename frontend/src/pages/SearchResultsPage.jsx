@@ -151,7 +151,7 @@ export default function SearchResultsPage() {
           </div>
 
           {/* Top Header */}
-          <div className="mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-r from-red-700 via-red-700 to-red-700 p-6 text-white shadow-xl shadow-red-200 md:rounded-[2.5rem] md:p-8">
+          <div className="mb-8 overflow-hidden rounded-[2rem] bg-gradient-to-r from-orange-600 via-orange-600 to-orange-600 p-6 text-white shadow-xl shadow-red-200 md:rounded-[2.5rem] md:p-8">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium backdrop-blur-sm">
@@ -180,7 +180,7 @@ export default function SearchResultsPage() {
           <div className="relative z-50 mb-8 rounded-[2rem] border border-white/60 bg-white/80 p-4 shadow-xl shadow-red-100 backdrop-blur-xl md:p-5">
             <div className="grid gap-4 md:grid-cols-5">
               <div ref={activeField === "from" ? dropdownRef : null} className="relative flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <MapPin className="text-red-600" size={18} />
+                <MapPin className="text-orange-600" size={18} />
                 <input
                   type="text"
                   name="from"
@@ -219,7 +219,7 @@ export default function SearchResultsPage() {
               </div>
 
               <div ref={activeField === "to" ? dropdownRef : null} className="relative flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <MapPin className="text-red-600" size={18} />
+                <MapPin className="text-orange-600" size={18} />
                 <input
                   type="text"
                   name="to"
@@ -258,7 +258,7 @@ export default function SearchResultsPage() {
               </div>
 
               <div className="flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <CalendarDays className="text-red-600" size={18} />
+                <CalendarDays className="text-orange-600" size={18} />
                 <input
                   type="date"
                   name="date"
@@ -269,7 +269,7 @@ export default function SearchResultsPage() {
               </div>
 
               <div className="flex items-center gap-3 rounded-[1.25rem] border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                <ArrowUpDown className="text-red-600" size={18} />
+                <ArrowUpDown className="text-orange-600" size={18} />
                 <select
                   name="sort"
                   value={filters.sort}
@@ -298,7 +298,7 @@ export default function SearchResultsPage() {
             {/* Sidebar */}
             <aside className="h-fit rounded-[2rem] border border-white/60 bg-white/80 p-5 shadow-xl shadow-red-100 backdrop-blur-xl">
               <div className="mb-5 flex items-center gap-2">
-                <Filter className="text-red-700" size={18} />
+                <Filter className="text-orange-700" size={18} />
                 <h3 className="text-lg font-bold text-slate-900">Filters</h3>
               </div>
 
@@ -341,12 +341,12 @@ export default function SearchResultsPage() {
                 </div>
               ) : error ? (
                 <div className="rounded-[2rem] border border-red-100 bg-white p-8 shadow-lg">
-                  <p className="font-medium text-red-600">{error}</p>
+                  <p className="font-medium text-orange-600">{error}</p>
                 </div>
               ) : filteredTrips.length === 0 ? (
                 <div className="rounded-[2rem] border border-white/60 bg-white/80 p-10 text-center shadow-xl shadow-red-100">
                   <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                    <Bus className="text-red-700" size={28} />
+                    <Bus className="text-orange-600" size={28} />
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900">
                     No buses found
