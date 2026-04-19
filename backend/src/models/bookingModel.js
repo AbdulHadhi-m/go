@@ -36,6 +36,11 @@ const bookingSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    appliedCoupon: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Coupon",
+      default: null,
+    },
     offerApplied: {
       type: String,
       default: "",

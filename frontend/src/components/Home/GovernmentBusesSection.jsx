@@ -35,11 +35,6 @@ const busPartners = [
     name: "haab Travels",
     logo: "https://img.freepik.com/premium-vector/round-blue-bus-sign-vector-illustration_213497-1718.jpg",
     description: "Popular private intercity bus operator",
-  },
-  {id: 4,
-    name: "HRTC",
-    logo: "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/HRTCHP.jpg/250px-HRTCHP.jpg",
-    description: "Himachal Road Transport Corporation",
   }
 ];
 
@@ -102,8 +97,8 @@ export default function BusPartnersSection() {
             }}
             className="!pb-2"
           >
-            {busPartners.map((bus) => (
-              <SwiperSlide key={bus.id} className="h-auto">
+            {[...busPartners, ...busPartners].map((bus, index) => (
+              <SwiperSlide key={`${bus.id}-${index}`} className="h-auto">
                 <GovernmentBusCard bus={bus} />
               </SwiperSlide>
             ))}

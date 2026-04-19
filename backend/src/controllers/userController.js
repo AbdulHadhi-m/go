@@ -111,11 +111,9 @@ export const changePassword = asyncHandler(async (req, res) => {
 });
 
 export const uploadAvatar = asyncHandler(async (req, res) => {
-  const { avatar } = req.body;
-
-  if (!avatar) {
+  if (!req.file) {
     res.status(400);
-    throw new Error("Avatar URL is required");
+    throw new Error("Please select an image file to upload");
   }
 
   const user = await User.findById(req.user._id);
@@ -124,7 +122,10 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  user.avatar = String(avatar).trim();
+  console.log("Uploaded file details:", req.file);
+
+  // Cloudinary returns the uploaded image URL in req.file.path
+  user.avatar = req.file.path || req.file.secure_url;
   await user.save();
 
   res.status(200).json({

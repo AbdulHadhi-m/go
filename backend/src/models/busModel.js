@@ -29,6 +29,11 @@ const busSchema = new mongoose.Schema(
       default: 40,
       min: 1,
     },
+    fare: {
+      type: Number,
+      default: 900,
+      min: 0,
+    },
     amenities: [
       {
         type: String,

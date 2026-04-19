@@ -5,6 +5,7 @@ import mongoose from "mongoose";
 import Coupon from "../models/couponModel.js";
 import Booking from "../models/bookingModel.js";
 import Trip from "../models/tripModel.js";
+import CouponUsage from "../models/couponUsageModel.js";
 
 const FIRST_BOOKING_PERCENT = 10;
 
@@ -65,9 +66,19 @@ const buildManualOffer = (coupon, amount) => {
 const checkCouponEligibility = async ({ coupon, amount, trip, userId }) => {
   if (!coupon) return "Invalid coupon code";
   if (!coupon.isActive) return "Coupon is inactive";
+  if (dayjs(coupon.startDate).isAfter(dayjs())) return "Coupon is not active yet";
   if (dayjs(coupon.expiryDate).isBefore(dayjs())) return "Coupon has expired";
   if (coupon.usageLimit > 0 && coupon.usedCount >= coupon.usageLimit) {
     return "Coupon usage limit reached";
+  }
+
+  // Check per-user limit
+  const userUsageCount = await CouponUsage.countDocuments({
+    user: userId,
+    coupon: coupon._id,
+  });
+  if (userUsageCount >= (coupon.perUserLimit || 1)) {
+    return "You have exceeded the usage limit for this coupon";
   }
   if (amount < coupon.minAmount) {
     return `Minimum amount should be ₹${coupon.minAmount} for this coupon`;
@@ -90,7 +101,7 @@ const checkCouponEligibility = async ({ coupon, amount, trip, userId }) => {
   return null;
 };
 
-const evaluateOffer = async ({ userId, amount, code, trip }) => {
+export const evaluateOffer = async ({ userId, amount, code, trip }) => {
   const hasAuto = await isFirstSuccessfulBooking(userId);
   const autoOffer = hasAuto ? buildAutoOffer(amount) : null;
 
@@ -232,14 +243,17 @@ export const validateCoupon = asyncHandler(async (req, res) => {
 export const createCoupon = asyncHandler(async (req, res) => {
   const {
     code,
+    description = "",
     autoGenerate = false,
     prefix = "GP",
     discountType,
     discountValue,
     minAmount = 0,
     maxDiscount = 0,
+    startDate,
     expiryDate,
     usageLimit = 0,
+    perUserLimit = 1,
     applicableRoutes = [],
     firstTimeUsersOnly = false,
     festivalTag = "",
@@ -269,12 +283,15 @@ export const createCoupon = asyncHandler(async (req, res) => {
 
   const coupon = await Coupon.create({
     code: finalCode,
+    description,
     discountType,
     discountValue,
     minAmount,
     maxDiscount,
+    startDate: startDate || new Date(),
     expiryDate,
     usageLimit,
+    perUserLimit,
     applicableRoutes,
     firstTimeUsersOnly,
     festivalTag,
@@ -313,5 +330,60 @@ export const toggleCouponStatus = asyncHandler(async (req, res) => {
     success: true,
     message: `Coupon ${coupon.isActive ? "activated" : "deactivated"} successfully`,
     coupon,
+  });
+});
+
+export const updateCoupon = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const updates = req.body;
+
+  const coupon = await Coupon.findById(id);
+  if (!coupon) {
+    res.status(404);
+    throw new Error("Coupon not found");
+  }
+
+  // Prevent code change if not authorized or keep it simple
+  if (updates.code) {
+    updates.code = String(updates.code).trim().toUpperCase();
+    const existing = await Coupon.findOne({ code: updates.code, _id: { $ne: id } });
+    if (existing) {
+      res.status(400);
+      throw new Error("Coupon code already in use");
+    }
+  }
+
+  const updatedCoupon = await Coupon.findByIdAndUpdate(id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Coupon updated successfully",
+    coupon: updatedCoupon,
+  });
+});
+
+export const deleteCoupon = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  const coupon = await Coupon.findById(id);
+  if (!coupon) {
+    res.status(404);
+    throw new Error("Coupon not found");
+  }
+
+  // Check if it's been used
+  if (coupon.usedCount > 0) {
+    res.status(400);
+    throw new Error("Cannot delete a coupon that has already been used. Please deactivate it instead.");
+  }
+
+  await Coupon.findByIdAndDelete(id);
+
+  res.status(200).json({
+    success: true,
+    message: "Coupon deleted successfully",
   });
 });

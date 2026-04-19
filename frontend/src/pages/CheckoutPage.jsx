@@ -5,6 +5,8 @@ import toast from "react-hot-toast";
 import MainLayout from "../components/layout/MainLayout";
 import { createBooking } from "../features/bookings/bookingSlice";
 import { applyCoupon, clearCoupon } from "../features/coupon/couponSlice";
+import loadRazorpayScript from "../utils/loadRazorpay";
+import { createOrderAPI, verifyPaymentAPI } from "../services/paymentService";
 
 export default function CheckoutPage() {
   const location = useLocation();
@@ -30,8 +32,7 @@ export default function CheckoutPage() {
   });
 
   const tax = useMemo(() => Math.round(baseFare * 0.05), [baseFare]);
-  const discount = 100;
-  const amountBeforeOffer = Math.max(0, baseFare + tax - discount);
+  const amountBeforeOffer = Math.max(0, baseFare + tax);
   const offerApplied = couponState.offerType && couponState.offerType !== "none";
   const total = offerApplied ? couponState.finalAmount : amountBeforeOffer;
 
@@ -82,15 +83,7 @@ export default function CheckoutPage() {
     const bookingData = {
       tripId: trip._id,
       seats: selectedSeats,
-      totalAmount: total,
-      originalAmount: amountBeforeOffer,
-      finalAmount: total,
-      discountAmount: couponState.discountAmount || 0,
       couponCode: couponState.coupon || null,
-      offerApplied: couponState.offerApplied || "",
-      offerType: couponState.offerType || "none",
-      offerMeta: couponState.offerMeta || {},
-      firstBookingOfferUsed: couponState.offerType === "first_booking_auto",
       paymentMethod,
       passengerDetails: [
         {
@@ -102,12 +95,70 @@ export default function CheckoutPage() {
     };
 
     try {
-      await dispatch(createBooking(bookingData)).unwrap();
-      toast.success("Booking created successfully");
-      dispatch(clearCoupon());
-      navigate("/my-bookings");
+      const isLoaded = await loadRazorpayScript();
+      if (!isLoaded) {
+        toast.error("Razorpay SDK failed to load. Are you online?");
+        return;
+      }
+
+      const order = await createOrderAPI({
+        tripId: trip._id,
+        seats: selectedSeats,
+        couponCode: couponState.coupon || null,
+      });
+      if (!order || !order.id) {
+        toast.error("Server error. Please try again.");
+        return;
+      }
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: "GoPath",
+        description: `Booking for ${trip.from} to ${trip.to}`,
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            const verifyPayload = {
+              orderCreationId: order.id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+              ...bookingData,
+            };
+
+            const verificationResult = await verifyPaymentAPI(verifyPayload);
+            if (verificationResult.success) {
+              toast.success("Payment successful! Booking confirmed.");
+              dispatch(clearCoupon());
+              navigate("/my-bookings");
+            } else {
+              toast.error("Payment verification failed.");
+            }
+          } catch (error) {
+            toast.error(error?.response?.data?.message || "Payment verification failed.");
+          }
+        },
+        prefill: {
+          name: formData.fullName,
+          email: formData.email,
+          contact: formData.phone,
+          // Pre-select tab based on user UI choice, but leave all options available
+          method: paymentMethod.toLowerCase() === "wallet" ? "wallet" : paymentMethod.toLowerCase() === "card" ? "card" : "upi",
+        },
+        theme: {
+          color: "#b91c1c",
+        },
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.on("payment.failed", function (response) {
+        toast.error(response.error.description || "Payment failed");
+      });
+      paymentObject.open();
     } catch (error) {
-      toast.error(error || "Booking failed");
+      toast.error(error?.response?.data?.message || error.message || "Failed to initiate payment");
     }
   };
 
@@ -247,7 +298,7 @@ export default function CheckoutPage() {
                    </button>
                 </div>
                 <p className="mt-3 text-sm text-slate-500">
-                  Demo payment flow active. Real payment gateway is bypassed for testing.
+                  Secure payments via Razorpay Test Gateway. Please use test credentials for test mode.
                 </p>
               </div>
             </div>
@@ -325,11 +376,6 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between">
                   <span>Discount</span>
-                  <span>-₹{discount}</span>
-                </div>
-
-                <div className="flex justify-between">
-                  <span>Offer Discount</span>
                   <span>-₹{couponState.discountAmount || 0}</span>
                 </div>
 

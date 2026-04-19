@@ -35,6 +35,7 @@ const SUGGESTED_CITIES = [
 ];
 import MainLayout from "../components/layout/MainLayout";
 import FavoriteButton from "../components/common/FavoriteButton";
+import BusCard from "../components/bus/BusCard";
 import { selectIsAuthenticated } from "../features/auth/authSelectors";
 import { getMyFavorites } from "../features/favorites/favoriteSlice";
 import { getTrips } from "../features/trips/tripSlice";
@@ -356,109 +357,7 @@ export default function SearchResultsPage() {
                 </div>
               ) : (
                 filteredTrips.map((trip) => (
-                  <div
-                    key={trip._id}
-                    className="group overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 p-6 shadow-xl shadow-red-100 backdrop-blur-xl transition hover:-translate-y-0.5 hover:shadow-2xl hover:shadow-red-200"
-                  >
-                    <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
-                      {/* Left */}
-                      <div className="flex-1">
-                        <div className="mb-4 flex flex-wrap items-center gap-3">
-                          <div className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                            {trip.busType || "Premium Coach"}
-                          </div>
-                          <div className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                            {trip.availableSeats} seats left
-                          </div>
-                          <FavoriteButton trip={trip} />
-                        </div>
-
-                        <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">
-                          {trip.busName}
-                        </h2>
-
-                        <div className="mt-3 flex flex-wrap items-center gap-3 text-sm text-slate-500">
-                          <span className="inline-flex items-center gap-1.5">
-                            <MapPin size={16} className="text-red-600" />
-                            {trip.from}
-                          </span>
-                          <span className="text-slate-300">→</span>
-                          <span className="inline-flex items-center gap-1.5">
-                            <MapPin size={16} className="text-red-600" />
-                            {trip.to}
-                          </span>
-                        </div>
-
-                        <div className="mt-5 grid gap-4 sm:grid-cols-3">
-                          <div className="rounded-[1.25rem] bg-slate-50 p-4">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                              Departure
-                            </p>
-                            <p className="mt-2 inline-flex items-center gap-2 text-lg font-bold text-slate-900">
-                              <Clock3 size={18} className="text-red-600" />
-                              {trip.departureTime}
-                            </p>
-                          </div>
-
-                          <div className="rounded-[1.25rem] bg-slate-50 p-4">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                              Arrival
-                            </p>
-                            <p className="mt-2 inline-flex items-center gap-2 text-lg font-bold text-slate-900">
-                              <Clock3 size={18} className="text-red-600" />
-                              {trip.arrivalTime}
-                            </p>
-                          </div>
-
-                          <div className="rounded-[1.25rem] bg-slate-50 p-4">
-                            <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                              Travel Date
-                            </p>
-                            <p className="mt-2 inline-flex items-center gap-2 text-lg font-bold text-slate-900">
-                              <CalendarDays
-                                size={18}
-                                className="text-red-600"
-                              />
-                              {trip.journeyDate
-                                ? new Date(trip.journeyDate).toLocaleDateString("en-GB", {
-                                    day: "2-digit",
-                                    month: "2-digit",
-                                    year: "numeric",
-                                  })
-                                : "N/A"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right */}
-                      <div className="xl:w-[260px]">
-                        <div className="rounded-[1.75rem] bg-gradient-to-br from-red-600 to-red-700 p-5 text-white shadow-lg shadow-red-200">
-                          <p className="text-sm text-white/80">Starting from</p>
-                          <h3 className="mt-2 text-4xl font-extrabold tracking-tight">
-                            ₹{trip.fare}
-                          </h3>
-
-                          <div className="mt-5 space-y-3">
-                           <button
-  onClick={() => navigate(`/trip/${trip._id}/seats`)}
-  className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] bg-white px-4 py-3 font-semibold text-red-700 transition hover:bg-red-50"
->
-  <Ticket size={18} />
-  View Seats
-</button>
-
-<button
-  onClick={() => navigate(`/trip/${trip._id}`)}
-  className="flex w-full items-center justify-center gap-2 rounded-[1.25rem] border border-white/20 bg-white/10 px-4 py-3 font-semibold text-white transition hover:bg-white/15"
->
-  View Details
-</button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                  <BusCard key={trip._id || trip.id} bus={trip} />
                 ))
               )}
             </div>

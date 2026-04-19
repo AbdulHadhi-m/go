@@ -9,6 +9,11 @@ const couponSchema = new mongoose.Schema(
       uppercase: true,
       trim: true,
     },
+    description: {
+      type: String,
+      trim: true,
+      default: "",
+    },
     discountType: {
       type: String,
       enum: ["percentage", "flat"],
@@ -29,6 +34,10 @@ const couponSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    startDate: {
+      type: Date,
+      default: Date.now,
+    },
     expiryDate: {
       type: Date,
       required: true,
@@ -37,6 +46,11 @@ const couponSchema = new mongoose.Schema(
       type: Number,
       default: 0,
       min: 0,
+    },
+    perUserLimit: {
+      type: Number,
+      default: 1,
+      min: 1,
     },
     usedCount: {
       type: Number,

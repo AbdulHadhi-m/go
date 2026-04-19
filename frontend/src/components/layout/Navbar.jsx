@@ -108,6 +108,7 @@ export default function Navbar() {
                     src={userAvatar}
                     alt={displayName}
                     className="h-full w-full object-cover"
+                    referrerPolicy="no-referrer"
                     onError={(e) => {
                       e.currentTarget.src = fallbackAvatar;
                     }}
@@ -127,29 +128,33 @@ export default function Navbar() {
                     </div>
 
                     <div className="p-2">
-                      <NavLink
-                        to="/"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Home
-                          size={16}
-                          className="text-slate-400 group-hover:text-red-500"
-                        />
-                        Home
-                      </NavLink>
+                      {user?.role !== "admin" && user?.role !== "operator" && (
+                        <>
+                          <NavLink
+                            to="/"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Home
+                              size={16}
+                              className="text-slate-400 group-hover:text-red-500"
+                            />
+                            Home
+                          </NavLink>
 
-                      <NavLink
-                        to="/search-results"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Search
-                          size={16}
-                          className="text-slate-400 group-hover:text-red-500"
-                        />
-                        Search
-                      </NavLink>
+                          <NavLink
+                            to="/search-results"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Search
+                              size={16}
+                              className="text-slate-400 group-hover:text-red-500"
+                            />
+                            Search
+                          </NavLink>
+                        </>
+                      )}
 
                       <NavLink
                         to="/profile"
@@ -163,51 +168,43 @@ export default function Navbar() {
                         Profile
                       </NavLink>
 
-                      <NavLink
-                        to="/my-bookings"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
-                      >
-                        <CalendarDays
-                          size={16}
-                          className="text-slate-400 group-hover:text-red-500"
-                        />
-                        My Bookings
-                      </NavLink>
+                      {user?.role !== "admin" && user?.role !== "operator" && (
+                        <>
+                          <NavLink
+                            to="/my-bookings"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
+                          >
+                            <CalendarDays
+                              size={16}
+                              className="text-slate-400 group-hover:text-red-500"
+                            />
+                            My Bookings
+                          </NavLink>
 
-                      <NavLink
-                        to="/favorites"
-                        onClick={() => setIsDropdownOpen(false)}
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
-                      >
-                        <Heart
-                          size={16}
-                          className="text-slate-400 group-hover:text-red-500"
-                        />
-                        Wishlist
-                      </NavLink>
+                          <NavLink
+                            to="/favorites"
+                            onClick={() => setIsDropdownOpen(false)}
+                            className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
+                          >
+                            <Heart
+                              size={16}
+                              className="text-slate-400 group-hover:text-red-500"
+                            />
+                            Wishlist
+                          </NavLink>
 
-                      {user?.role === "admin" && (
-                        <NavLink
-                          to="/admin/dashboard"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="group flex w-full items-center gap-3 rounded-xl border border-red-100 bg-red-50/50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 hover:text-red-800"
-                        >
-                          <ShieldAlert size={16} className="text-red-500" />
-                          Admin Dashboard
-                        </NavLink>
-                      )}
-
-                      {(user?.role === "operator" ||
-                        user?.role === "admin") && (
-                        <NavLink
-                          to="/operator/dashboard"
-                          onClick={() => setIsDropdownOpen(false)}
-                          className="group mt-1 flex w-full items-center gap-3 rounded-xl border border-red-100 bg-red-50/50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 hover:text-red-800"
-                        >
-                          <BadgeCheck size={16} className="text-red-500" />
-                          Operator Dashboard
-                        </NavLink>
+                          {user?.role === "operator" && (
+                            <NavLink
+                              to="/operator/dashboard"
+                              onClick={() => setIsDropdownOpen(false)}
+                              className="group mt-1 flex w-full items-center gap-3 rounded-xl border border-red-100 bg-red-50/50 px-3 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100 hover:text-red-800"
+                            >
+                              <BadgeCheck size={16} className="text-red-500" />
+                              Operator Dashboard
+                            </NavLink>
+                          )}
+                        </>
                       )}
                     </div>
 

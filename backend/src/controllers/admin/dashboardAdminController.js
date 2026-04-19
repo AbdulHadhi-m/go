@@ -44,17 +44,29 @@ export const getDashboardStats = asyncHandler(async (req, res) => {
           day: { $dayOfMonth: "$createdAt" },
         },
         count: { $sum: 1 },
+        revenue: { $sum: { $cond: [ { $gt: ["$finalAmount", 0] }, "$finalAmount", "$totalAmount" ] } },
       },
     },
-    { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
   ]);
 
-  const dailyBookings = dailyBookingsAgg.map((item) => ({
-    date: `${item._id.year}-${String(item._id.month).padStart(2, "0")}-${String(
-      item._id.day
-    ).padStart(2, "0")}`,
-    count: item.count,
-  }));
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    last7Days.push({ date: dateStr, count: 0, revenue: 0 });
+  }
+
+  dailyBookingsAgg.forEach((item) => {
+    const dateStr = `${item._id.year}-${String(item._id.month).padStart(2, "0")}-${String(item._id.day).padStart(2, "0")}`;
+    const day = last7Days.find((d) => d.date === dateStr);
+    if (day) {
+      day.count = item.count;
+      day.revenue = item.revenue;
+    }
+  });
+
+  const dailyBookings = last7Days;
 
   res.status(200).json({
     success: true,

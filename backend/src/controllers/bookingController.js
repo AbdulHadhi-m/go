@@ -3,6 +3,8 @@ import mongoose from "mongoose";
 import Booking from "../models/bookingModel.js";
 import Trip from "../models/tripModel.js";
 import Coupon from "../models/couponModel.js";
+import CouponUsage from "../models/couponUsageModel.js";
+import { calculateSecureTotals } from "../services/pricingService.js";
 
 const parseDepartureDateTime = (journeyDate, departureTime) => {
   if (!journeyDate || !departureTime) return null;
@@ -47,20 +49,12 @@ export const createBooking = asyncHandler(async (req, res) => {
   const {
     tripId,
     seats,
-    totalAmount,
     passengerDetails,
     paymentMethod,
     couponCode = null,
-    discountAmount = 0,
-    originalAmount = totalAmount,
-    finalAmount = totalAmount,
-    offerApplied = "",
-    offerType = "none",
-    offerMeta = {},
-    firstBookingOfferUsed = false,
   } = req.body;
 
-  if (!tripId || !Array.isArray(seats) || seats.length === 0 || totalAmount === undefined) {
+  if (!tripId || !Array.isArray(seats) || seats.length === 0) {
     res.status(400);
     throw new Error("Please provide all required booking details");
   }
@@ -83,21 +77,23 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw new Error("Not enough seats available");
   }
 
+  const securePricing = await calculateSecureTotals(tripId, seats.length, couponCode, req.user._id);
+
   const booking = await Booking.create({
     user: req.user._id,
     trip: tripId,
     seats,
-    totalAmount,
-    originalAmount,
-    finalAmount,
-    discountAmount,
-    couponCode: couponCode ? String(couponCode).toUpperCase() : null,
-    offerApplied,
-    offerType,
-    offerMeta,
-    firstBookingOfferUsed,
+    totalAmount: securePricing.finalAmount,
+    originalAmount: securePricing.amountBeforeOffer,
+    finalAmount: securePricing.finalAmount,
+    discountAmount: securePricing.discountAmount,
+    couponCode: securePricing.selectedOffer?.couponCode || null,
+    offerApplied: securePricing.selectedOffer?.offerApplied || "",
+    offerType: securePricing.selectedOffer?.offerType || "none",
+    offerMeta: securePricing.selectedOffer?.offerMeta || {},
+    firstBookingOfferUsed: securePricing.selectedOffer?.offerType === "first_booking_auto",
     couponUsageCounted: false,
-    paidAmount: totalAmount,
+    paidAmount: securePricing.finalAmount,
     paymentMethod: paymentMethod || "UPI",
     passengerDetails: passengerDetails || [],
     bookingStatus: "confirmed",
@@ -111,13 +107,24 @@ export const createBooking = asyncHandler(async (req, res) => {
   await trip.save();
 
   if (booking.couponCode && booking.offerType === "coupon" && !booking.couponUsageCounted) {
-    await Coupon.findOneAndUpdate(
+    const couponDoc = await Coupon.findOneAndUpdate(
       {
         code: booking.couponCode,
         ...(booking.offerMeta?.couponId ? { _id: booking.offerMeta.couponId } : {}),
       },
-      { $inc: { usedCount: 1 } }
+      { $inc: { usedCount: 1 } },
+      { new: true }
     );
+    
+    if (couponDoc) {
+      booking.appliedCoupon = couponDoc._id;
+      await CouponUsage.create({
+        user: req.user._id,
+        coupon: couponDoc._id,
+        booking: booking._id,
+      });
+    }
+
     booking.couponUsageCounted = true;
     await booking.save();
   }

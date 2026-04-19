@@ -6,6 +6,7 @@ import {
   ArrowLeftRight,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 
 const SUGGESTED_CITIES = [
   "Bangalore",
@@ -70,6 +71,11 @@ export default function HeroSection() {
   const handleSearch = (e) => {
     e.preventDefault();
 
+    if (!formData.from.trim() || !formData.to.trim()) {
+      toast.error("Please enter both origin and destination cities.");
+      return;
+    }
+
     const params = new URLSearchParams();
 
     if (formData.from) params.set("from", formData.from);
@@ -118,6 +124,7 @@ export default function HeroSection() {
                 <input
                   type="text"
                   name="from"
+                  required
                   value={formData.from}
                   onChange={handleChange}
                   onFocus={() => setActiveField("from")}
@@ -181,6 +188,7 @@ export default function HeroSection() {
                 <input
                   type="text"
                   name="to"
+                  required
                   value={formData.to}
                   onChange={handleChange}
                   onFocus={() => setActiveField("to")}

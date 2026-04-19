@@ -1,9 +1,9 @@
 import axiosInstance from "./axiosInstance";
 
-export const createOrderAPI = async (amount, token) => {
+export const createOrderAPI = async (payload, token) => {
   const { data } = await axiosInstance.post(
     `/payments/create-order`,
-    { amount },
+    payload,
     {
       headers: token ? {
         Authorization: `Bearer ${token}`,

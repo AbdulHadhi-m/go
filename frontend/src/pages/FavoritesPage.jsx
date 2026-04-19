@@ -12,6 +12,7 @@ import {
   selectFavorites,
 } from "../features/favorites/favoriteSlice";
 import { isValidObjectId } from "../utils/isValidObjectId";
+import BusCard from "../components/bus/BusCard";
 
 export default function FavoritesPage() {
   const dispatch = useDispatch();
@@ -70,79 +71,48 @@ export default function FavoritesPage() {
               </p>
             </div>
           ) : (
-            <div className="grid gap-5 md:grid-cols-2">
+            <div className="flex flex-col gap-6">
               {favorites.map((favorite) => (
-                <article
-                  key={favorite._id}
-                  className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-red-100"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
-                        Favorite Route
-                      </p>
-                      <h2 className="mt-2 text-2xl font-extrabold text-slate-900">
-                        {favorite.from} → {favorite.to}
-                      </h2>
-                    </div>
+                <div key={favorite._id} className="flex flex-col gap-2">
+                  <div className="flex justify-end pr-2">
                     <button
                       type="button"
                       onClick={() => handleRemove(favorite._id)}
-                      className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
+                      className="inline-flex items-center gap-1 rounded bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-600 hover:bg-rose-100 hover:text-rose-700 transition shadow-sm border border-rose-100"
                     >
-                      Remove
+                      Remove Route
                     </button>
                   </div>
-
-                  <div className="mt-5 space-y-2 text-sm text-slate-600">
-                    <p className="inline-flex items-center gap-2">
-                      <MapPin size={16} className="text-red-600" />
-                      {favorite.trip?.busName || "Saved route"}
-                    </p>
-                    <p>
-                      Date:{" "}
-                      {favorite.boardingDate
-                        ? new Date(favorite.boardingDate).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" })
-                        : "Flexible"}
-                    </p>
-                  </div>
-
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <div className="w-full">
                     {favorite.trip ? (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/trip/${favorite.trip._id}`)}
-                          className="rounded-2xl border border-red-200 px-4 py-3 font-semibold text-red-700 hover:bg-red-50"
-                        >
-                          View Details
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/trip/${favorite.trip._id}/seats`)}
-                          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white hover:bg-red-800"
-                        >
-                          <Ticket size={18} />
-                          Book Now
-                        </button>
-                      </>
+                      <BusCard bus={favorite.trip} />
                     ) : (
-                      <button
-                        type="button"
-                        onClick={() =>
-                          navigate(
-                            `/search-results?from=${encodeURIComponent(
-                              favorite.from
-                            )}&to=${encodeURIComponent(favorite.to)}`
-                          )
-                        }
-                        className="col-span-2 rounded-2xl bg-red-700 px-4 py-3 font-semibold text-white hover:bg-red-800"
-                      >
-                        Search This Route
-                      </button>
+                      <div className="rounded-[2rem] bg-white p-6 shadow-sm ring-1 ring-red-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div>
+                          <p className="text-xs font-semibold uppercase tracking-wide text-red-500">
+                            Route Only Favorite
+                          </p>
+                          <h2 className="mt-2 text-2xl font-extrabold text-slate-900">
+                            {favorite.from} → {favorite.to}
+                          </h2>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            navigate(
+                              `/search-results?from=${encodeURIComponent(
+                                favorite.from
+                              )}&to=${encodeURIComponent(favorite.to)}`
+                            )
+                          }
+                          className="rounded-2xl bg-red-700 px-6 py-3 font-semibold text-white shadow-md hover:bg-red-800 transition"
+                        >
+                          Search Route
+                        </button>
+                      </div>
                     )}
                   </div>
-                </article>
+                </div>
               ))}
             </div>
           )}

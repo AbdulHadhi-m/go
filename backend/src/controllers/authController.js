@@ -2,6 +2,19 @@ import asyncHandler from "express-async-handler";
 import bcrypt from "bcryptjs";
 import User from "../models/userModel.js";
 import generateToken from "../utils/generateToken.js";
+import Joi from "joi";
+
+const registerSchema = Joi.object({
+  firstName: Joi.string().min(2).required(),
+  lastName: Joi.string().optional().allow(""),
+  email: Joi.string().email().required(),
+  password: Joi.string().min(6).required(),
+});
+
+const loginSchema = Joi.object({
+  email: Joi.string().email().required(),
+  password: Joi.string().required(),
+});
 
 const setTokenCookie = (res, token) => {
   res.cookie("token", token, {
@@ -16,12 +29,13 @@ const setTokenCookie = (res, token) => {
 // @route POST /api/auth/register
 // @access Public
 export const registerUser = asyncHandler(async (req, res) => {
-  const { firstName, lastName, email, password } = req.body;
-
-  if (!firstName || !email || !password) {
+  const { error } = registerSchema.validate(req.body);
+  if (error) {
     res.status(400);
-    throw new Error("Please provide all required fields");
+    throw new Error(error.details[0].message);
   }
+
+  const { firstName, lastName, email, password } = req.body;
 
   const existingUser = await User.findOne({ email });
 
@@ -67,12 +81,13 @@ export const registerUser = asyncHandler(async (req, res) => {
 // @route POST /api/auth/login
 // @access Public
 export const loginUser = asyncHandler(async (req, res) => {
-  const { email, password } = req.body;
-
-  if (!email || !password) {
+  const { error } = loginSchema.validate(req.body);
+  if (error) {
     res.status(400);
-    throw new Error("Please enter email and password");
+    throw new Error(error.details[0].message);
   }
+
+  const { email, password } = req.body;
 
   const user = await User.findOne({ email });
 

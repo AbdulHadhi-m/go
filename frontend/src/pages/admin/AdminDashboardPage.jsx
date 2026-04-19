@@ -1,19 +1,31 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
-import MainLayout from "../../components/layout/MainLayout";
 import {
-  approveOperator,
-  clearAdminMessage,
-  deleteAnyBus,
-  fetchAdminDashboard,
-  rejectOperator,
-  toggleUserBlock,
-  updateComplaint,
-} from "../../features/admin/adminSlice";
+  LayoutDashboard,
+  Users as UsersIcon,
+  Briefcase,
+  Bus,
+  Ticket,
+  MessageSquareWarning,
+  Tag,
+} from "lucide-react";
+
+import MainLayout from "../../components/layout/MainLayout";
+import { clearAdminMessage, fetchAdminDashboard } from "../../features/admin/adminSlice";
+
+import Overview from "./Overview";
+import Users from "./Users";
+import Operators from "./Operators";
+import Buses from "./Buses";
+import Bookings from "./Bookings";
+import Complaints from "./Complaints";
+import CouponManagementPage from "./CouponManagementPage";
 
 export default function AdminDashboardPage() {
   const dispatch = useDispatch();
+  const [activeTab, setActiveTab] = useState("overview");
+
   const {
     stats,
     dailyBookings = [],
@@ -43,126 +55,93 @@ export default function AdminDashboardPage() {
     }
   }, [error, successMessage, dispatch]);
 
-  const maxDaily = Math.max(...dailyBookings.map((d) => d.count), 1);
-  const cards = [
-    ["Total Users", stats?.totalUsers || 0],
-    ["Total Operators", stats?.totalOperators || 0],
-    ["Total Buses", stats?.totalBuses || 0],
-    ["Total Trips", stats?.totalTrips || 0],
-    ["Total Bookings", stats?.totalBookings || 0],
-    ["Total Revenue", `₹${stats?.totalRevenue || 0}`],
-    ["Cancelled Tickets", stats?.cancelledTickets || 0],
-    ["Active Routes", stats?.activeRoutes || 0],
+  const tabs = [
+    { id: "overview", label: "Overview", icon: <LayoutDashboard size={20} /> },
+    { id: "users", label: "Manage Users", icon: <UsersIcon size={20} /> },
+    { id: "operators", label: "Operators", icon: <Briefcase size={20} /> },
+    { id: "buses", label: "Manage Buses", icon: <Bus size={20} /> },
+    { id: "bookings", label: "All Bookings", icon: <Ticket size={20} /> },
+    { id: "coupons", label: "Coupons", icon: <Tag size={20} /> },
+    { id: "complaints", label: "Support Tickets", icon: <MessageSquareWarning size={20} /> },
   ];
 
   return (
     <MainLayout>
-      <section className="mx-auto max-w-7xl px-4 py-10 md:px-6">
-        <h1 className="text-3xl font-extrabold text-slate-900">Admin Dashboard</h1>
-        <p className="mt-2 text-slate-600">System super control center.</p>
-
-        <div className="mt-6 grid gap-4 md:grid-cols-4">
-          {cards.map(([label, value]) => (
-            <div key={label} className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-red-100">
-              <p className="text-sm text-slate-500">{label}</p>
-              <p className="text-2xl font-bold text-red-700">{value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-8 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-red-100">
-          <h2 className="text-xl font-bold text-slate-900">Daily Booking Chart (Last 7 Days)</h2>
-          <div className="mt-4 flex items-end gap-3">
-            {dailyBookings.map((point) => (
-              <div key={point.date} className="flex w-full flex-col items-center">
-                <div
-                  className="w-full rounded-t-md bg-red-500"
-                  style={{ height: `${Math.max(12, (point.count / maxDaily) * 140)}px` }}
-                  title={`${point.date}: ${point.count}`}
-                />
-                <p className="mt-1 text-[10px] text-slate-500">{point.date.slice(5)}</p>
-              </div>
-            ))}
+      <div className="min-h-screen bg-slate-50/50 flex flex-col md:flex-row mt-1 border-t border-slate-200/60">
+        
+        {/* Modern Sidebar */}
+        <aside className="w-full md:w-72 bg-white border-r border-slate-200/60 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-10 flex flex-col">
+          <div className="p-8 pb-4">
+             <h2 className="text-2xl font-black text-slate-900 tracking-tight">Admin<span className="text-red-600">Core</span></h2>
+             <p className="text-[10px] font-bold text-slate-400 mt-1 uppercase tracking-widest">Global Master Workspace</p>
           </div>
-        </div>
+          
+          <nav className="flex flex-col gap-2 px-4 py-4 overflow-y-auto w-full">
+             {tabs.map(tab => (
+               <button
+                 key={tab.id}
+                 onClick={() => setActiveTab(tab.id)}
+                 className={`flex items-center gap-3.5 px-5 py-3.5 rounded-2xl transition-all duration-200 font-bold text-sm w-full outline-none
+                  ${activeTab === tab.id 
+                    ? 'bg-red-50 text-red-700 shadow-sm border border-red-100/50 translate-x-1' 
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 border border-transparent'}`}
+               >
+                 <span className={`${activeTab === tab.id ? 'opacity-100' : 'opacity-70'} transition-opacity`}>{tab.icon}</span> 
+                 {tab.label}
+                 {/* Badge logic for pending tasks */}
+                 {tab.id === 'complaints' && complaints.filter(c => c.status !== 'resolved').length > 0 && (
+                    <span className="ml-auto bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{complaints.filter(c => c.status !== 'resolved').length}</span>
+                 )}
+                 {tab.id === 'operators' && operators.filter(o => o.operatorApplicationStatus === 'pending').length > 0 && (
+                    <span className="ml-auto bg-amber-500 text-white text-[10px] px-2 py-0.5 rounded-full">{operators.filter(o => o.operatorApplicationStatus === 'pending').length}</span>
+                 )}
+               </button>
+             ))}
+          </nav>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-red-100">
-            <h2 className="text-xl font-bold text-slate-900">Users</h2>
-            <div className="mt-4 space-y-2">
-              {users.slice(0, 8).map((u) => (
-                <div key={u._id} className="flex items-center justify-between rounded-xl border p-3">
-                  <p className="text-sm">{u.firstName} {u.lastName} · {u.role}</p>
-                  <button
-                    onClick={() => dispatch(toggleUserBlock(u._id))}
-                    className="rounded-lg border px-3 py-1 text-xs"
-                  >
-                    {u.isBlocked ? "Unblock" : "Block"}
-                  </button>
+          <div className="mt-auto p-6 pt-0 opacity-60 pointer-events-none">
+             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
+                <p className="text-xs font-bold text-slate-400 mb-1">Server Status</p>
+                <div className="flex items-center justify-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                   <span className="text-[10px] uppercase font-black tracking-wider text-emerald-600">Operational</span>
                 </div>
-              ))}
-            </div>
+             </div>
           </div>
+        </aside>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-red-100">
-            <h2 className="text-xl font-bold text-slate-900">Operators</h2>
-            <div className="mt-4 space-y-2">
-              {operators.slice(0, 8).map((u) => (
-                <div key={u._id} className="flex items-center justify-between rounded-xl border p-3">
-                  <p className="text-sm">{u.firstName} {u.lastName} · {u.operatorApplicationStatus || u.role}</p>
-                  <div className="flex gap-2">
-                    <button onClick={() => dispatch(approveOperator(u._id))} className="rounded-lg border px-3 py-1 text-xs">Approve</button>
-                    <button onClick={() => dispatch(rejectOperator({ userId: u._id, reason: "Rejected by admin" }))} className="rounded-lg border border-rose-200 px-3 py-1 text-xs text-rose-600">Reject</button>
-                  </div>
+        {/* Dynamic Canvas Area */}
+        <main className="flex-1 p-6 md:p-10 lg:p-12 overflow-y-auto max-h-screen">
+          <div className="max-w-[1400px] mx-auto">
+             {/* Header */}
+             <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-4">
+                <div>
+                   <h1 className="text-3xl lg:text-4xl font-black text-slate-900 capitalize tracking-tight">{tabs.find(t=>t.id===activeTab)?.label}</h1>
+                   <p className="text-sm font-semibold text-slate-400 mt-2 uppercase tracking-widest">
+                     Administer & Control System Integrations
+                   </p>
                 </div>
-              ))}
-            </div>
-          </div>
-        </div>
+                {loading && (
+                  <span className="inline-flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-blue-600 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 shadow-sm animate-pulse">
+                     Syncing Database...
+                  </span>
+                )}
+             </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-red-100">
-            <h2 className="text-xl font-bold text-slate-900">Buses</h2>
-            <div className="mt-4 space-y-2">
-              {buses.slice(0, 8).map((b) => (
-                <div key={b._id} className="flex items-center justify-between rounded-xl border p-3">
-                  <p className="text-sm">{b.name} ({b.busNumber})</p>
-                  <button onClick={() => dispatch(deleteAnyBus(b._id))} className="rounded-lg border border-rose-200 px-3 py-1 text-xs text-rose-600">Delete</button>
-                </div>
-              ))}
-            </div>
+             {/* Swappable Contents */}
+             <div className="min-h-[500px]">
+               {activeTab === 'overview' && <Overview stats={stats} dailyBookings={dailyBookings} bookings={bookings} complaints={complaints} operators={operators} setActiveTab={setActiveTab} />}
+               {activeTab === 'users' && <Users users={users} />}
+               {activeTab === 'operators' && <Operators operators={operators} />}
+               {activeTab === 'buses' && <Buses buses={buses} />}
+               {activeTab === 'bookings' && <Bookings bookings={bookings} />}
+               {activeTab === 'coupons' && <CouponManagementPage />}
+               {activeTab === 'complaints' && <Complaints complaints={complaints} />}
+             </div>
           </div>
+        </main>
 
-          <div className="rounded-2xl bg-white p-5 shadow-sm ring-1 ring-red-100">
-            <h2 className="text-xl font-bold text-slate-900">Complaints</h2>
-            <div className="mt-4 space-y-2">
-              {complaints.slice(0, 8).map((c) => (
-                <div key={c._id} className="rounded-xl border p-3">
-                  <p className="text-sm font-semibold">{c.subject}</p>
-                  <p className="text-xs text-slate-500">{c.message}</p>
-                  <div className="mt-2 flex gap-2">
-                    <button onClick={() => dispatch(updateComplaint({ complaintId: c._id, status: "in_progress", resolutionNote: "Investigating" }))} className="rounded-lg border px-2 py-1 text-xs">In Progress</button>
-                    <button onClick={() => dispatch(updateComplaint({ complaintId: c._id, status: "resolved", resolutionNote: "Resolved by admin" }))} className="rounded-lg border px-2 py-1 text-xs">Resolve</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-8 rounded-2xl bg-white p-5 shadow-sm ring-1 ring-red-100">
-          <h2 className="text-xl font-bold text-slate-900">Recent Bookings</h2>
-          <p className="mt-1 text-sm text-slate-500">Showing latest {Math.min(10, bookings.length)} bookings</p>
-          <div className="mt-4 space-y-2">
-            {bookings.slice(0, 10).map((b) => (
-              <div key={b._id} className="rounded-xl border p-3 text-sm">
-                {b.user?.firstName} {b.user?.lastName} · {b.trip?.from} → {b.trip?.to} · ₹{b.finalAmount || b.totalAmount}
-              </div>
-            ))}
-          </div>
-        </div>
-        {loading && <p className="mt-4 text-sm text-slate-500">Refreshing admin data...</p>}
-      </section>
+      </div>
     </MainLayout>
   );
 }

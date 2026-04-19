@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useDispatch, useSelector } from "react-redux";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import {
   clearAuthError,
   registerUser,
@@ -12,6 +15,17 @@ import {
   selectIsAuthenticated,
 } from "../../features/auth/authSelectors";
 
+const registerSchema = z.object({
+  firstName: z.string().min(2, "First name must be at least 2 characters"),
+  lastName: z.string().min(2, "Last name must be at least 2 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string()
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 export default function RegisterForm() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -20,12 +34,8 @@ export default function RegisterForm() {
   const error = useSelector(selectAuthError);
   const isAuthenticated = useSelector(selectIsAuthenticated);
 
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+  const { register, handleSubmit, formState: { errors } } = useForm({
+    resolver: zodResolver(registerSchema),
   });
 
   useEffect(() => {
@@ -42,29 +52,13 @@ export default function RegisterForm() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleChange = (e) => {
-    setFormData((prev) => ({
-      ...prev,
-      [e.target.name]: e.target.value,
+  const onSubmit = (data) => {
+    dispatch(registerUser({
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
+        password: data.password,
     }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
-    const payload = {
-      firstName: formData.firstName,
-      lastName: formData.lastName,
-      email: formData.email,
-      password: formData.password,
-    };
-
-    dispatch(registerUser(payload));
   };
 
   const handleGoogleLogin = () => {
@@ -78,8 +72,7 @@ export default function RegisterForm() {
   return (
     <div className="mx-auto max-w-md">
       <div className="mb-8">
-        <h1 className="text-3xl font-extrabold text-slate-900">Create account
-</h1>
+        <h1 className="text-3xl font-extrabold text-slate-900">Create account</h1>
         <p className="mt-2 text-sm text-slate-500">
           Create your account and start booking in minutes.
         </p>
@@ -100,52 +93,57 @@ export default function RegisterForm() {
         <div className="h-px flex-1 bg-slate-200" />
       </div>
 
-      <form onSubmit={handleSubmit} className="grid gap-4 md:grid-cols-2">
-        <input
-          name="firstName"
-          placeholder="First name"
-          value={formData.firstName}
-          onChange={handleChange}
-          className="rounded-2xl border border-red-100 px-4 py-3"
-        />
+      <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 md:grid-cols-2">
+        <div>
+          <input
+            {...register("firstName")}
+            placeholder="First name"
+            className={`w-full rounded-2xl border ${errors.firstName ? 'border-red-500' : 'border-red-100'} px-4 py-3 outline-none focus:ring-2 focus:ring-red-100`}
+          />
+          {errors.firstName && <p className="mt-1 text-xs text-red-500">{errors.firstName.message}</p>}
+        </div>
 
-        <input
-          name="lastName"
-          placeholder="Last name"
-          value={formData.lastName}
-          onChange={handleChange}
-          className="rounded-2xl border border-red-100 px-4 py-3"
-        />
+        <div>
+           <input
+             {...register("lastName")}
+             placeholder="Last name"
+             className={`w-full rounded-2xl border ${errors.lastName ? 'border-red-500' : 'border-red-100'} px-4 py-3 outline-none focus:ring-2 focus:ring-red-100`}
+           />
+           {errors.lastName && <p className="mt-1 text-xs text-red-500">{errors.lastName.message}</p>}
+        </div>
 
-        <input
-          name="email"
-          type="email"
-          placeholder="Email"
-          value={formData.email}
-          onChange={handleChange}
-          className="md:col-span-2 rounded-2xl border border-red-100 px-4 py-3"
-        />
+        <div className="md:col-span-2">
+           <input
+             {...register("email")}
+             type="email"
+             placeholder="Email"
+             className={`w-full rounded-2xl border ${errors.email ? 'border-red-500' : 'border-red-100'} px-4 py-3 outline-none focus:ring-2 focus:ring-red-100`}
+           />
+           {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
+        </div>
 
-        <input
-          name="password"
-          type="password"
-          placeholder="Password"
-          value={formData.password}
-          onChange={handleChange}
-          className="md:col-span-2 rounded-2xl border border-red-100 px-4 py-3"
-        />
+        <div className="md:col-span-2">
+           <input
+             {...register("password")}
+             type="password"
+             placeholder="Password"
+             className={`w-full rounded-2xl border ${errors.password ? 'border-red-500' : 'border-red-100'} px-4 py-3 outline-none focus:ring-2 focus:ring-red-100`}
+           />
+           {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
+        </div>
 
-        <input
-          name="confirmPassword"
-          type="password"
-          placeholder="Confirm password"
-          value={formData.confirmPassword}
-          onChange={handleChange}
-          className="md:col-span-2 rounded-2xl border border-red-100 px-4 py-3"
-        />
+        <div className="md:col-span-2">
+           <input
+             {...register("confirmPassword")}
+             type="password"
+             placeholder="Confirm password"
+             className={`w-full rounded-2xl border ${errors.confirmPassword ? 'border-red-500' : 'border-red-100'} px-4 py-3 outline-none focus:ring-2 focus:ring-red-100`}
+           />
+           {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
+        </div>
 
         <label className="md:col-span-2 flex items-start gap-3 text-sm text-slate-600">
-          <input type="checkbox" className="mt-1 rounded" />
+          <input type="checkbox" className="mt-1 rounded" required />
           <span>
             I agree to{" "}
             <span className="text-red-700 font-semibold">Terms</span> and{" "}
