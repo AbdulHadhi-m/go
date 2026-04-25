@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Wallet,
   Settings,
-  Bell
+  Bell,
+  Gift
 } from "lucide-react";
 import MainLayout from "../components/layout/MainLayout";
 import {
@@ -28,15 +29,22 @@ import {
   uploadAvatar,
 } from "../features/user/userSlice";
 import { setAuthUser, logoutUser } from "../features/auth/authSlice";
+import { getRewardBalance, getRewardHistory } from "../features/reward/rewardSlice";
 import { useNavigate } from "react-router-dom";
+import BusCoinImg from "../assets/buscoin.svg";
 
 export default function ProfilePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
-  const { profile, isLoading, isError, isSuccess, message } = useSelector(
+  const { profile, isLoading: profileLoading, isError, isSuccess, message } = useSelector(
     (state) => state.user
   );
+  const { balance, history, isLoading: rewardLoading } = useSelector(
+    (state) => state.reward
+  );
+
+  const isLoading = profileLoading || rewardLoading;
 
   const [activeTab, setActiveTab] = useState("my-profile");
   const fileInputRef = useRef(null);
@@ -61,7 +69,14 @@ export default function ProfilePage() {
 
   useEffect(() => {
     dispatch(getMyProfile());
+    dispatch(getRewardBalance());
   }, [dispatch]);
+
+  useEffect(() => {
+    if (activeTab === "rewards") {
+      dispatch(getRewardHistory());
+    }
+  }, [dispatch, activeTab]);
 
   useEffect(() => {
     if (profile) {
@@ -158,6 +173,7 @@ export default function ProfilePage() {
 
   const tabs = [
     { id: "my-profile", label: "My Profile", icon: <User size={20} /> },
+    { id: "rewards", label: "GoCoins Wallet", icon: <img src={BusCoinImg} alt="coin" className="w-5 h-5 object-contain" /> },
     { id: "security", label: "Login & Security", icon: <Lock size={20} /> },
     { id: "co-travellers", label: "Co-travellers", icon: <Users size={20} /> },
     { id: "notifications", label: "Notifications", icon: <Bell size={20} /> },
@@ -211,12 +227,12 @@ export default function ProfilePage() {
 
               <div className="hidden xl:flex gap-4 mb-4">
                  <div className="bg-white/10 backdrop-blur-lg px-8 py-5 rounded-[2rem] border border-white/20 flex flex-col items-center shadow-lg">
-                    <p className="text-[10px] font-black text-white/80 uppercase tracking-widest mb-1">goCash</p>
-                    <p className="text-2xl font-black text-white">₹1,240</p>
+                    <img src={BusCoinImg} alt="BusCoin" className="w-8 h-8 mb-1 drop-shadow-[0_0_12px_rgba(255,215,0,0.4)] object-contain" />
+                    <p className="text-2xl font-black text-white">{profile?.rewardCoins || 0}</p>
                  </div>
                  <div className="bg-white/10 backdrop-blur-lg px-8 py-5 rounded-[2rem] border border-white/20 flex flex-col items-center shadow-lg">
                     <p className="text-[10px] font-black text-white/80 uppercase tracking-widest mb-1">Trip Count</p>
-                    <p className="text-2xl font-black text-white">12</p>
+                    <p className="text-2xl font-black text-white">{profile?.tripCount || 0}</p>
                  </div>
               </div>
            </div>
@@ -334,24 +350,6 @@ export default function ProfilePage() {
                             </div>
                          </section>
 
-                         {/* Document Details placeholder */}
-                         <section>
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6 border-l-4 border-indigo-500 pl-4 bg-slate-50 py-2 rounded-r-lg">Identification Information</h3>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                               <div className="space-y-2">
-                                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Passport Number (Optional)</label>
-                                  <input className="w-full bg-slate-50/50 border border-dashed border-slate-300 rounded-2xl px-5 py-4 text-sm font-semibold italic text-slate-400 outline-none" placeholder="Enter Valid Passport ID" readOnly />
-                               </div>
-                               <div className="space-y-2">
-                                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Issuing Country</label>
-                                  <select className="w-full bg-slate-50 border border-slate-200 rounded-2xl px-5 py-4 text-sm font-semibold outline-none transition-all">
-                                     <option>India</option>
-                                     <option>United Kingdom</option>
-                                     <option>United Arab Emirates</option>
-                                  </select>
-                               </div>
-                            </div>
-                         </section>
 
                          <div className="flex pt-6">
                             <button 
@@ -365,6 +363,76 @@ export default function ProfilePage() {
                       </form>
                    </div>
                  )}
+
+                  {activeTab === 'rewards' && (
+                    <div className="space-y-8 animate-in fade-in">
+                       <div className="border-b border-slate-100 pb-8 flex justify-between items-center">
+                          <div>
+                             <h2 className="text-2xl font-black text-slate-900 capitalize">GoCoins Wallet</h2>
+                             <p className="text-sm text-slate-400 font-semibold mt-1">Earned through your travels with GoPath.</p>
+                          </div>
+                          <div className="bg-red-50 px-6 py-4 rounded-3xl border border-red-100 flex items-center gap-4">
+                             <img src={BusCoinImg} alt="BusCoin" className="w-14 h-14 drop-shadow-md object-contain" />
+                             <div className="text-left">
+                                <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Total Balance</p>
+                                <p className="text-3xl font-black text-red-600 leading-none">{profile?.rewardCoins || 0}</p>
+                             </div>
+                          </div>
+                       </div>
+
+                       <div className="bg-gradient-to-br from-slate-900 to-slate-800 rounded-[2rem] p-8 text-white relative overflow-hidden">
+                          <div className="relative z-10">
+                             <h3 className="text-lg font-bold">Rewards Program</h3>
+                             <p className="text-slate-400 text-sm mt-2 max-w-md">You earn 3% of your booking amount as GoCoins after every completed trip. 1 GoCoin = ₹0.50 discount on future bookings.</p>
+                             <div className="mt-6 inline-block px-4 py-2 bg-white/10 rounded-xl text-xs font-bold border border-white/10">
+                                Use coins on your next booking
+                             </div>
+                          </div>
+                          <Gift size={120} className="absolute -right-8 -bottom-8 text-white/5 -rotate-12" />
+                       </div>
+
+                       <div className="space-y-4">
+                          <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest ml-1">Transaction History</h3>
+                          
+                          {history && history.length > 0 ? (
+                            <div className="space-y-3">
+                               {history.map((tx) => (
+                                 <div key={tx._id} className="flex items-center justify-between p-5 bg-slate-50 border border-slate-100 rounded-2xl">
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                                           tx.type === 'EARN' ? 'bg-green-50' : 
+                                           tx.type === 'REDEEM' ? 'bg-rose-50' : 'bg-slate-100'
+                                        }`}>
+                                           <img src={BusCoinImg} alt="coin" className={`w-7 h-7 object-contain ${tx.type === 'REDEEM' ? 'grayscale opacity-70' : ''}`} />
+                                        </div>
+                                       <div>
+                                          <p className="font-bold text-slate-900">{tx.description}</p>
+                                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                                             {new Date(tx.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                             {tx.booking && ` • Trip ID: ${tx.booking._id.slice(-6).toUpperCase()}`}
+                                          </p>
+                                       </div>
+                                    </div>
+                                    <div className="text-right">
+                                       <p className={`text-lg font-black ${
+                                          tx.type === 'EARN' ? 'text-green-600' : 'text-red-600'
+                                       }`}>
+                                          {tx.type === 'EARN' ? '+' : '-'}{tx.coins}
+                                       </p>
+                                       <p className="text-[10px] text-slate-400 font-bold uppercase">Coins</p>
+                                    </div>
+                                 </div>
+                               ))}
+                            </div>
+                          ) : (
+                            <div className="p-12 text-center border-2 border-dashed border-slate-100 rounded-[2.5rem]">
+                               <p className="text-slate-400 font-bold">No reward transactions yet.</p>
+                               <p className="text-xs text-slate-300 mt-1">Complete a trip to earn your first GoCoins!</p>
+                            </div>
+                          )}
+                       </div>
+                    </div>
+                  )}
 
                  {activeTab === 'security' && (
                    <div className="space-y-12 animate-in fade-in">
@@ -425,5 +493,9 @@ export default function ProfilePage() {
 // Helper icon
 const PlusCircle = ({ size, className }) => (
    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+);
+
+const MinusCircle = ({ size, className }) => (
+   <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
 );
 

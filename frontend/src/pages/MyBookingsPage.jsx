@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import MainLayout from "../components/layout/MainLayout";
 import {
@@ -49,6 +49,48 @@ export default function MyBookingsPage() {
     if (status === "processed") return "bg-emerald-100 text-emerald-700";
     if (status === "failed") return "bg-red-100 text-red-700";
     return "bg-slate-100 text-slate-600";
+  };
+
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+  const [reviewingBooking, setReviewingBooking] = useState(null);
+  const [rating, setRating] = useState(5);
+  const [title, setTitle] = useState("");
+  const [review, setReview] = useState("");
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+
+  const openReviewModal = (booking) => {
+    setReviewingBooking(booking);
+    setRating(5);
+    setTitle("");
+    setReview("");
+    setReviewModalOpen(true);
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!title.trim() || !review.trim()) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+    try {
+      setIsSubmittingReview(true);
+      const mod = await import("../services/axiosInstance");
+      const axiosInstance = mod.default;
+      
+      await axiosInstance.post('/reviews', {
+         bookingId: reviewingBooking._id,
+         rating,
+         title,
+         review
+      });
+      
+      toast.success("Review submitted! Proper work!");
+      setReviewModalOpen(false);
+    } catch(err) {
+      toast.error(err.response?.data?.message || err.message || "Failed to submit review");
+    } finally {
+      setIsSubmittingReview(false);
+    }
   };
 
   const handleDownloadTicket = (booking) => {
@@ -318,6 +360,15 @@ export default function MyBookingsPage() {
                         {loading ? "Cancelling..." : "Cancel Booking"}
                       </button>
                     )}
+
+                    {booking.bookingStatus === "completed" && (
+                      <button
+                        onClick={() => openReviewModal(booking)}
+                        className="rounded-2xl bg-[#01b559] px-4 py-2 font-semibold text-white transition hover:bg-[#009b4c]"
+                      >
+                        Review & Feedback
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -325,6 +376,79 @@ export default function MyBookingsPage() {
           </div>
         )}
       </section>
+
+      {/* Write Review Modal */}
+      {reviewModalOpen && reviewingBooking && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-2xl bg-white p-6 shadow-xl">
+            <h2 className="mb-4 text-2xl font-bold text-slate-900">Rate & Feedback</h2>
+            <p className="mb-6 text-slate-500">How was your trip to {reviewingBooking.trip?.to || "your destination"}?</p>
+            
+            <form onSubmit={handleReviewSubmit}>
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Rating (1 to 5)</label>
+                <div className="flex items-center gap-2">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      type="button"
+                      key={star}
+                      onClick={() => setRating(star)}
+                      className={`text-2xl transition ${star <= rating ? "text-amber-400" : "text-slate-300 hover:text-amber-200"}`}
+                    >
+                      ★
+                    </button>
+                  ))}
+                  <span className="ml-2 font-bold text-slate-700">{rating}.0 / 5</span>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Title</label>
+                <input
+                  type="text"
+                  required
+                  maxLength={100}
+                  value={title}
+                  placeholder="Summarize your experience (e.g. Excellent service)"
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 p-3 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="mb-6">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">Review</label>
+                <textarea
+                  required
+                  maxLength={500}
+                  rows={4}
+                  value={review}
+                  placeholder="Tell us more about the cleanliness, punctuality, and driving..."
+                  onChange={(e) => setReview(e.target.value)}
+                  className="w-full rounded-lg border border-slate-300 p-3 focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setReviewModalOpen(false)}
+                  className="rounded-lg bg-slate-100 px-5 py-2.5 font-semibold text-slate-700 transition hover:bg-slate-200"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReview}
+                  className="rounded-lg bg-[#01b559] px-5 py-2.5 font-bold text-white shadow transition hover:bg-[#009b4c] disabled:opacity-50"
+                >
+                  {isSubmittingReview ? "Submitting..." : "Submit Feedback"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </MainLayout>
   );
 }

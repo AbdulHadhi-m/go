@@ -31,6 +31,27 @@ export default function TripDetailsPage() {
   const [boardingPoint, setBoardingPoint] = useState(null);
   const [droppingPoint, setDroppingPoint] = useState(null);
 
+  const [reviewsData, setReviewsData] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === "reviews" && trip?.bus && reviewsData.length === 0 && !reviewsLoading) {
+      setReviewsLoading(true);
+      import("../services/axiosInstance").then((mod) => {
+        const axiosInstance = mod.default;
+        axiosInstance.get(`/reviews/bus/${typeof trip.bus === 'object' ? trip.bus._id : trip.bus}`)
+          .then((res) => {
+             setReviewsData(res.data.data || []);
+             setReviewsLoading(false);
+          })
+          .catch((err) => {
+             console.error("Error fetching reviews:", err);
+             setReviewsLoading(false);
+          });
+      });
+    }
+  }, [activeTab, trip?.bus]);
+
   useEffect(() => {
     dispatch(getTripById(id));
     dispatch(getTripSeats(id));
@@ -47,22 +68,26 @@ export default function TripDetailsPage() {
     );
   };
 
-  const totalAmount = selectedSeats.length * (trip?.fare || 900);
+  const boardingPointsList = useMemo(() => {
+    return [...(trip?.boardingPoints || [])].sort((a, b) => a.sequence - b.sequence);
+  }, [trip]);
 
-  const boardingPointsList = [
-    { id: "bp1", time: trip?.departureTime || "19:30", name: trip?.from || "Aristo Junction", sub: trip?.from || "Aristo Junction" },
-    { id: "bp2", time: "20:00", name: "Kazhakoottam", sub: "Kazhakoottam" },
-    { id: "bp3", time: "20:15", name: "Attingall 62552", sub: "Opp To Mosque 0471 4066930,9388522552" },
-  ];
-
-  const droppingPointsList = [
-    { id: "dp1", time: trip?.arrivalTime || "04:15", name: trip?.to || "Malappuram", sub: "KRTC Bus Stand" },
-  ];
+  const droppingPointsList = useMemo(() => {
+    return [...(trip?.droppingPoints || [])].sort((a, b) => a.sequence - b.sequence);
+  }, [trip]);
 
   useEffect(() => {
-    if (boardingPointsList.length > 0 && !boardingPoint) setBoardingPoint(boardingPointsList[0].id);
-    if (droppingPointsList.length > 0 && !droppingPoint) setDroppingPoint(droppingPointsList[0].id);
-  }, []); // eslint-disable-line
+    if (boardingPointsList.length > 0 && !boardingPoint) setBoardingPoint(boardingPointsList[0]._id);
+    if (droppingPointsList.length > 0 && !droppingPoint) setDroppingPoint(droppingPointsList[0]._id);
+  }, [boardingPointsList, droppingPointsList, boardingPoint, droppingPoint]);
+
+  const selectedBoardingObj = useMemo(() => boardingPoint ? boardingPointsList.find(p => p._id === boardingPoint) : null, [boardingPoint, boardingPointsList]);
+  const selectedDroppingObj = useMemo(() => droppingPoint ? droppingPointsList.find(p => p._id === droppingPoint) : null, [droppingPoint, droppingPointsList]);
+  
+  const boardingExtra = selectedBoardingObj?.extraFare || 0;
+  const droppingExtra = selectedDroppingObj?.extraFare || 0;
+
+  const totalAmount = selectedSeats.length * ((trip?.fare || 0) + boardingExtra + droppingExtra);
 
   if (loading && !trip) {
     return (
@@ -173,7 +198,7 @@ export default function TripDetailsPage() {
                       const labels = {
                         seats: "SELECT SEATS",
                         amenities: "AMENITIES AND PHOTOS",
-                        reviews: "REVIEWS",
+                        reviews: "REVIEWS & FEEDBACK",
                         policies: "POLICIES",
                         boarding: "BOARDING AND DROPPING"
                       };
@@ -204,12 +229,15 @@ export default function TripDetailsPage() {
                               <p className="mb-2 font-medium text-slate-700">Boarding Point</p>
                               <div className="flex flex-col">
                                 {boardingPointsList.map((pt, idx) => (
-                                    <label key={pt.id} className={`flex cursor-pointer gap-3 border p-3 bg-white transition ${boardingPoint === pt.id ? 'border-blue-500 ring-1 ring-blue-500 z-10' : 'border-slate-200 border-t-0'} ${idx === 0 ? 'border-t rounded-t' : ''} ${idx === boardingPointsList.length - 1 ? 'rounded-b' : ''}`}>
-                                      <input type="radio" name="boarding" className="mt-1 w-4 h-4 text-[#3366cc]" checked={boardingPoint === pt.id} onChange={() => setBoardingPoint(pt.id)} />
+                                    <label key={pt._id} className={`flex cursor-pointer gap-3 border p-3 bg-white transition ${boardingPoint === pt._id ? 'border-blue-500 ring-1 ring-blue-500 z-10' : 'border-slate-200 border-t-0'} ${idx === 0 ? 'border-t rounded-t' : ''} ${idx === boardingPointsList.length - 1 ? 'rounded-b' : ''}`}>
+                                      <input type="radio" name="boarding" className="mt-1 w-4 h-4 text-[#3366cc]" checked={boardingPoint === pt._id} onChange={() => setBoardingPoint(pt._id)} />
                                       <div>
-                                          <p className="text-sm font-bold text-slate-900">{pt.time}</p>
+                                          <div className="flex items-center justify-between gap-2">
+                                              <p className="text-sm font-bold text-slate-900">{pt.time}</p>
+                                              {pt.extraFare > 0 && <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">+₹{pt.extraFare}</span>}
+                                          </div>
                                           <p className="text-sm font-semibold text-slate-800">{pt.name}</p>
-                                          <p className="text-xs text-slate-500 mt-1">{pt.sub}</p>
+                                          <p className="text-xs text-slate-500 mt-1">{pt.landmark} • {pt.city}</p>
                                       </div>
                                     </label>
                                 ))}
@@ -219,12 +247,15 @@ export default function TripDetailsPage() {
                               <p className="mb-2 font-medium text-slate-700">Dropping Point</p>
                               <div className="flex flex-col">
                                 {droppingPointsList.map((pt, idx) => (
-                                    <label key={pt.id} className={`flex cursor-pointer gap-3 border p-3 bg-white transition ${droppingPoint === pt.id ? 'border-blue-500 ring-1 ring-blue-500 z-10' : 'border-slate-200 border-t-0'} ${idx === 0 ? 'border-t rounded-t' : ''} ${idx === droppingPointsList.length - 1 ? 'rounded-b' : ''}`}>
-                                      <input type="radio" name="dropping" className="mt-1 w-4 h-4 text-[#3366cc]" checked={droppingPoint === pt.id} onChange={() => setDroppingPoint(pt.id)} />
-                                      <div className="bg-slate-100 p-2 -my-2 -mr-2 -ml-1 rounded flex-1">
-                                          <p className="text-sm font-bold text-slate-900">{pt.time}</p>
+                                    <label key={pt._id} className={`flex cursor-pointer gap-3 border p-3 bg-white transition ${droppingPoint === pt._id ? 'border-blue-500 ring-1 ring-blue-500 z-10' : 'border-slate-200 border-t-0'} ${idx === 0 ? 'border-t rounded-t' : ''} ${idx === droppingPointsList.length - 1 ? 'rounded-b' : ''}`}>
+                                      <input type="radio" name="dropping" className="mt-1 w-4 h-4 text-[#3366cc]" checked={droppingPoint === pt._id} onChange={() => setDroppingPoint(pt._id)} />
+                                      <div className="flex-1">
+                                          <div className="flex items-center justify-between gap-2">
+                                              <p className="text-sm font-bold text-slate-900">{pt.time}</p>
+                                              {pt.extraFare > 0 && <span className="text-[10px] font-bold bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded">+₹{pt.extraFare}</span>}
+                                          </div>
                                           <p className="text-sm font-semibold text-slate-800">{pt.name}</p>
-                                          <p className="text-xs text-slate-500 mt-1">{pt.sub}</p>
+                                          <p className="text-xs text-slate-500 mt-1">{pt.landmark} • {pt.city}</p>
                                       </div>
                                     </label>
                                 ))}
@@ -274,16 +305,16 @@ export default function TripDetailsPage() {
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 10}).map((_, i) => {
                                                 const seat = `S${i+1}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===2;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
-                                                const isLadies = i===4;
+                                                const isLadies = false;
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-1 rounded transition border-t-[8px] border-b-[4px] border-l-[4px] border-r-0 border-slate-300 rounded-l-md ${isBooked ? (isLadies ? 'bg-[#e91e63]' : 'bg-slate-200 cursor-not-allowed') : isSelected ? 'bg-blue-100 border-[#3366cc]' : 'bg-white hover:border-[#3366cc]'}`}></button>;
                                             })}
                                           </div>
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 10}).map((_, i) => {
                                                 const seat = `S${i+11}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===8 || i===9;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
                                                 const isLadies = false;
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-1 rounded transition border-t-[8px] border-b-[4px] border-l-[4px] border-r-0 border-slate-300 rounded-l-md ${isBooked ? (isLadies ? 'bg-[#e91e63]' : 'bg-slate-200 cursor-not-allowed') : isSelected ? 'bg-blue-100 border-[#3366cc]' : 'bg-white hover:border-[#3366cc]'}`}></button>;
@@ -294,18 +325,18 @@ export default function TripDetailsPage() {
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 10}).map((_, i) => {
                                                 const seat = `S${i+21}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===1 || i===5;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
-                                                const isLadies = i===1;
+                                                const isLadies = false;
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-1 rounded transition border-t-[8px] border-b-[4px] border-l-[4px] border-r-0 border-slate-300 rounded-l-md ${isBooked ? (isLadies ? 'bg-[#e91e63]' : 'bg-slate-200 cursor-not-allowed') : isSelected ? 'bg-blue-100 border-[#3366cc]' : 'bg-white hover:border-[#3366cc]'}`}></button>;
                                             })}
                                           </div>
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 10}).map((_, i) => {
                                                 const seat = `S${i+31}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===0;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
-                                                const isLadies = true;
+                                                const isLadies = false;
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-1 rounded transition border-t-[8px] border-b-[4px] border-l-[4px] border-r-0 border-slate-300 rounded-l-md ${isBooked ? (isLadies ? 'bg-[#e91e63]' : 'bg-slate-200 cursor-not-allowed') : isSelected ? 'bg-blue-100 border-[#3366cc]' : 'bg-white hover:border-[#3366cc]'}`}></button>;
                                             })}
                                           </div>
@@ -324,7 +355,7 @@ export default function TripDetailsPage() {
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 6}).map((_, i) => {
                                                 const seat = `U${i+1}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===1;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-2 rounded transition border-2 ${isBooked ? 'bg-slate-200 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-[#3366cc] border-[#3366cc]' : 'bg-white border-slate-300 hover:border-[#3366cc]'}`}></button>;
                                             })}
@@ -332,7 +363,7 @@ export default function TripDetailsPage() {
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 6}).map((_, i) => {
                                                 const seat = `U${i+7}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===3;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-2 rounded transition border-2 ${isBooked ? 'bg-slate-200 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-[#3366cc] border-[#3366cc]' : 'bg-white border-slate-300 hover:border-[#3366cc]'}`}></button>;
                                             })}
@@ -350,7 +381,7 @@ export default function TripDetailsPage() {
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 6}).map((_, i) => {
                                                 const seat = `L${i+1}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===0;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-2 rounded transition border-2 ${isBooked ? 'bg-slate-200 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-[#3366cc] border-[#3366cc]' : 'bg-white border-slate-300 hover:border-[#3366cc]'}`}></button>;
                                             })}
@@ -358,7 +389,7 @@ export default function TripDetailsPage() {
                                           <div className="flex justify-between w-full">
                                             {Array.from({length: 6}).map((_, i) => {
                                                 const seat = `L${i+7}`;
-                                                const isBooked = bookedSeats.includes(seat) || i===5;
+                                                const isBooked = bookedSeats.includes(seat);
                                                 const isSelected = selectedSeats.includes(seat);
                                                 return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 flex-1 mx-2 rounded transition border-2 ${isBooked ? 'bg-slate-200 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-[#3366cc] border-[#3366cc]' : 'bg-white border-slate-300 hover:border-[#3366cc]'}`}></button>;
                                             })}
@@ -378,8 +409,8 @@ export default function TripDetailsPage() {
                                       <div className="flex flex-col gap-4 w-full">
                                         <div className="flex justify-between w-full">
                                           {Array.from({length: 5}).map((_, i) => {
-                                              const seat = `U${i+1}`;
-                                              const isBooked = bookedSeats.includes(seat) || i===1;
+                                           const seat = `U${i+1}`;
+                                              const isBooked = bookedSeats.includes(seat);
                                               const isSelected = selectedSeats.includes(seat);
                                               return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 w-[14%] rounded transition border-2 ${isBooked ? 'bg-slate-200 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-[#3366cc] border-[#3366cc]' : 'bg-white border-slate-300 hover:border-[#3366cc]'}`}></button>;
                                           })}
@@ -387,7 +418,7 @@ export default function TripDetailsPage() {
                                         <div className="flex justify-between w-full">
                                           {Array.from({length: 5}).map((_, i) => {
                                               const seat = `U${i+6}`;
-                                              const isBooked = bookedSeats.includes(seat) || i===3;
+                                              const isBooked = bookedSeats.includes(seat);
                                               const isSelected = selectedSeats.includes(seat);
                                               return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-8 w-[14%] rounded transition border-2 ${isBooked ? 'bg-slate-200 border-slate-200 cursor-not-allowed' : isSelected ? 'bg-[#3366cc] border-[#3366cc]' : 'bg-white border-slate-300 hover:border-[#3366cc]'}`}></button>;
                                           })}
@@ -409,20 +440,20 @@ export default function TripDetailsPage() {
                                         {/* Lower Row 1 (Seater) */}
                                         <div className="flex justify-between w-full">
                                           {Array.from({length: 8}).map((_, i) => {
-                                              const seat = `L${i+1}`;
-                                              const isBooked = bookedSeats.includes(seat) || i === 0 || i === 2;
+                                           const seat = `L${i+1}`;
+                                              const isBooked = bookedSeats.includes(seat);
                                               const isSelected = selectedSeats.includes(seat);
-                                              const isLadies = i === 2 || i === 4;
+                                              const isLadies = false;
                                               return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-6 flex-1 mx-1 rounded transition border-t-[8px] border-b-[4px] border-l-[4px] border-r-0 border-slate-300 rounded-l-md ${isBooked ? (isLadies ? 'bg-[#e91e63]' : 'bg-slate-200 cursor-not-allowed') : isSelected ? 'bg-blue-100 border-[#3366cc]' : 'bg-white hover:border-[#3366cc]'}`}></button>;
                                           })}
                                         </div>
                                         {/* Lower Row 2 (Seater) */}
                                         <div className="flex justify-between w-full">
                                           {Array.from({length: 8}).map((_, i) => {
-                                              const seat = `L${i+9}`;
-                                              const isBooked = bookedSeats.includes(seat) || i === 1 || i === 3;
+                                           const seat = `L${i+9}`;
+                                              const isBooked = bookedSeats.includes(seat);
                                               const isSelected = selectedSeats.includes(seat);
-                                              const isLadies = i === 1 || i === 3;
+                                              const isLadies = false;
                                               return <button key={seat} onClick={() => !isBooked && handleSeatClick(seat)} className={`h-6 flex-1 mx-1 rounded transition border-t-[8px] border-b-[4px] border-l-[4px] border-r-0 border-slate-300 rounded-l-md ${isBooked ? (isLadies ? 'bg-[#e91e63]' : 'bg-slate-200 cursor-not-allowed') : isSelected ? 'bg-blue-100 border-[#3366cc]' : 'bg-white hover:border-[#3366cc]'}`}></button>;
                                           })}
                                         </div>
@@ -440,7 +471,7 @@ export default function TripDetailsPage() {
                                   <h3 className="text-2xl font-bold text-slate-900">Total: ₹ {totalAmount}</h3>
                               </div>
                               <button 
-                                onClick={() => navigate("/checkout", { state: { trip, selectedSeats, totalAmount } })}
+                                onClick={() => navigate("/checkout", { state: { trip, selectedSeats, totalAmount, boardingPointId: boardingPoint, droppingPointId: droppingPoint } })}
                                 className="bg-[#ff7043] hover:bg-[#eb6136] text-white font-bold px-10 py-3 rounded-lg shadow transition w-full md:w-auto"
                               >
                                 CONTINUE
@@ -453,56 +484,77 @@ export default function TripDetailsPage() {
 
                     {activeTab === "reviews" && (
                       <div className="grid md:grid-cols-[250px_1fr_1fr] gap-8 bg-white p-8 rounded-xl border border-slate-200">
-                        <div className="border-r border-slate-100 pr-6">
-                            <div className="mb-6">
-                              <p className="text-4xl font-bold text-slate-900 inline-flex items-end gap-2">
-                                <span className="text-[#01b559]">4.9</span> 
-                                <span className="text-sm font-normal text-slate-500 pb-1">from 8 Ratings <span className="mx-1">|</span> 3 Reviews</span>
-                              </p>
-                            </div>
-                            <div className="space-y-3 text-sm font-medium text-slate-500">
-                              <div className="flex items-center gap-3"><span>5</span><div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden"><div className="w-[88%] h-full bg-[#3366cc]"></div></div><span>88%</span></div>
-                              <div className="flex items-center gap-3"><span>4</span><div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden"><div className="w-[13%] h-full bg-[#3366cc]"></div></div><span>13%</span></div>
-                              <div className="flex items-center gap-3"><span>3</span><div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden"></div><span>0%</span></div>
-                              <div className="flex items-center gap-3"><span>2</span><div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden"></div><span>0%</span></div>
-                              <div className="flex items-center gap-3"><span>1</span><div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden"></div><span>0%</span></div>
-                            </div>
-                        </div>
-                        <div className="px-2">
-                            <p className="font-semibold text-slate-900 mb-4">People Liked</p>
-                            <div className="flex flex-wrap gap-2">
-                              <span className="bg-[#ccf0dc] text-[#008f4c] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">Live tracking <span className="bg-[#008f4c] text-white rounded-full h-5 w-5 flex items-center justify-center">1</span></span>
-                              <span className="bg-[#ccf0dc] text-[#008f4c] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">Punctuality <span className="bg-[#008f4c] text-white rounded-full h-5 w-5 flex items-center justify-center">1</span></span>
-                              <span className="bg-[#ccf0dc] text-[#008f4c] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">AC <span className="bg-[#008f4c] text-white rounded-full h-5 w-5 flex items-center justify-center">1</span></span>
-                              <span className="bg-[#ccf0dc] text-[#008f4c] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">Rest stop hygiene <span className="bg-[#008f4c] text-white rounded-full h-5 w-5 flex items-center justify-center">1</span></span>
-                              <span className="bg-[#ccf0dc] text-[#008f4c] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">Driving <span className="bg-[#008f4c] text-white rounded-full h-5 w-5 flex items-center justify-center">1</span></span>
-                            </div>
-                        </div>
-                        <div>
-                            <p className="font-semibold text-slate-900 mb-4">Could Be Better</p>
-                            <div className="h-full flex items-center text-slate-400 text-sm italic">Nothing reported yet.</div>
-                        </div>
-                        
-                        <div className="col-span-full md:col-span-3 border-t border-slate-100 pt-8 mt-2 grid md:grid-cols-2 gap-8">
-                            <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
-                              <div className="flex justify-between items-center mb-3">
-                                  <div className="flex gap-3 items-center"><div className="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center"><User size={20} /></div> <span className="font-semibold text-slate-800">pramesh ap</span></div>
-                                  <div className="flex gap-3 items-center"><span className="bg-[#01b559] text-white px-1.5 py-0.5 text-xs font-bold rounded">5.0/5</span> <span className="text-xs font-medium text-slate-400">18-02-2026</span></div>
+                        {(() => {
+                          const avgRating = reviewsData.length > 0 ? (reviewsData.reduce((acc, curr) => acc + curr.rating, 0) / reviewsData.length).toFixed(1) : "0.0";
+                          const totalRates = reviewsData.length;
+                          const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+                          reviewsData.forEach(r => { counts[r.rating] = (counts[r.rating] || 0) + 1; });
+                          const getPct = (val) => totalRates > 0 ? Math.round((val / totalRates) * 100) : 0;
+                          
+                          return (
+                            <>
+                              <div className="border-r border-slate-100 pr-6">
+                                  <div className="mb-6">
+                                    <p className="text-4xl font-bold text-slate-900 inline-flex items-end gap-2">
+                                      <span className="text-[#01b559]">{avgRating}</span> 
+                                      <span className="text-sm font-normal text-slate-500 pb-1">from {totalRates} Ratings</span>
+                                    </p>
+                                  </div>
+                                  <div className="space-y-3 text-sm font-medium text-slate-500">
+                                    {[5, 4, 3, 2, 1].map((star) => (
+                                      <div key={star} className="flex items-center gap-3">
+                                        <span>{star}</span>
+                                        <div className="h-1 flex-1 bg-slate-100 rounded-full overflow-hidden">
+                                          <div className="h-full bg-[#3366cc]" style={{ width: `${getPct(counts[star])}%` }}></div>
+                                        </div>
+                                        <span className="w-8 text-right">{getPct(counts[star])}%</span>
+                                      </div>
+                                    ))}
+                                  </div>
                               </div>
-                              <p className="text-slate-700">Excellent.</p>
-                            </div>
-                            <div className="bg-slate-50 p-5 rounded-xl border border-slate-100">
-                              <div className="flex justify-between items-center mb-3">
-                                  <div className="flex gap-3 items-center"><div className="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center"><User size={20} /></div> <span className="font-semibold text-slate-800">Vishnu SV</span></div>
-                                  <div className="flex gap-3 items-center"><span className="bg-[#01b559] text-white px-1.5 py-0.5 text-xs font-bold rounded">5.0/5</span> <span className="text-xs font-medium text-slate-400">17-02-2026</span></div>
+                              <div className="px-2">
+                                  <p className="font-semibold text-slate-900 mb-4">People Liked</p>
+                                  <div className="flex flex-wrap gap-2">
+                                    {reviewsData.length > 0 ? (
+                                      <span className="bg-[#ccf0dc] text-[#008f4c] px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-2">Proper work <span className="bg-[#008f4c] text-white rounded-full h-5 w-5 flex items-center justify-center">✓</span></span>
+                                    ) : (
+                                       <div className="h-full flex items-center text-slate-400 text-sm italic">Nothing reported yet.</div>
+                                    )}
+                                  </div>
                               </div>
-                              <p className="text-slate-700">Excellent.</p>
-                            </div>
-                        </div>
-
-                        <div className="col-span-full md:col-span-3 text-center border-t border-slate-100 pt-6">
-                            <button className="text-[#3366cc] font-bold text-sm tracking-wide hover:underline">SEE ALL REVIEWS (3)</button>
-                        </div>
+                              <div>
+                                  <p className="font-semibold text-slate-900 mb-4">Could Be Better</p>
+                                  <div className="h-full flex items-center text-slate-400 text-sm italic">Nothing reported yet.</div>
+                              </div>
+                              
+                              <div className="col-span-full md:col-span-3 border-t border-slate-100 pt-8 mt-2 grid md:grid-cols-2 gap-8">
+                                  {reviewsLoading ? (
+                                     <p className="text-slate-500">Loading reviews...</p>
+                                  ) : reviewsData.length > 0 ? (
+                                      reviewsData.map(rev => (
+                                          <div key={rev._id} className="bg-slate-50 p-5 rounded-xl border border-slate-100">
+                                            <div className="flex justify-between items-center mb-3">
+                                                <div className="flex gap-3 items-center">
+                                                    {rev.user?.profileImage ? (
+                                                      <img src={rev.user.profileImage} alt={rev.user.firstName} className="w-10 h-10 rounded-full object-cover" />
+                                                    ) : (
+                                                      <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-400 flex items-center justify-center"><User size={20} /></div>
+                                                    )}
+                                                    <span className="font-semibold text-slate-800">{rev.user?.firstName} {rev.user?.lastName}</span>
+                                                </div>
+                                                <div className="flex gap-3 items-center"><span className="bg-[#01b559] text-white px-1.5 py-0.5 text-xs font-bold rounded">{rev.rating}.0/5</span> <span className="text-xs font-medium text-slate-400">{new Date(rev.createdAt).toLocaleDateString()}</span></div>
+                                            </div>
+                                            {rev.title && <h4 className="font-bold text-slate-800 mb-1">{rev.title}</h4>}
+                                            <p className="text-slate-700">{rev.review}</p>
+                                          </div>
+                                      ))
+                                  ) : (
+                                      <p className="text-slate-500 col-span-full text-center py-4">No reviews have been written for this bus yet.</p>
+                                  )}
+                              </div>
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
 
@@ -553,12 +605,12 @@ export default function TripDetailsPage() {
                             <h3 className="font-bold text-lg text-slate-900 mb-6">Boarding Points</h3>
                             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-4 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-200 before:to-transparent">
                                 {boardingPointsList.map((pt, idx) => (
-                                  <div key={pt.id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
+                                  <div key={pt._id} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                                       <div className="flex items-center justify-center w-8 h-8 rounded-full border-4 border-white bg-blue-100 text-blue-600 shadow shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 z-10"><CheckCircle2 size={16} /></div>
                                       <div className="w-[calc(100%-4rem)] md:w-[calc(50%-2.5rem)] bg-slate-50 border border-slate-100 p-4 rounded-xl">
                                           <p className="font-bold text-blue-600 mb-1">{pt.time}</p>
                                           <p className="font-bold text-slate-800">{pt.name}</p>
-                                          <p className="text-sm text-slate-500 mt-1">{pt.sub}</p>
+                                          <p className="text-sm text-slate-500 mt-1">{pt.landmark} • {pt.city}</p>
                                       </div>
                                   </div>
                                 ))}
@@ -569,11 +621,11 @@ export default function TripDetailsPage() {
                             <h3 className="font-bold text-lg text-slate-900 mb-6">Dropping Points</h3>
                             <div className="space-y-4">
                                 {droppingPointsList.map(pt => (
-                                  <div key={pt.id} className="border border-slate-100 p-5 bg-slate-50 rounded-xl relative overflow-hidden">
+                                  <div key={pt._id} className="border border-slate-100 p-5 bg-slate-50 rounded-xl relative overflow-hidden">
                                       <div className="absolute top-0 right-0 w-16 h-16 bg-blue-50 rounded-bl-full -mr-8 -mt-8"></div>
                                       <p className="font-bold text-blue-600 mb-1">{pt.time}</p>
                                       <p className="font-bold text-slate-800">{pt.name}</p>
-                                      <p className="text-sm text-slate-500 mt-1">{pt.sub}</p>
+                                      <p className="text-sm text-slate-500 mt-1">{pt.landmark} • {pt.city}</p>
                                   </div>
                                 ))}
                             </div>

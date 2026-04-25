@@ -7,6 +7,7 @@ import userReducer from "../features/user/userSlice";
 import couponReducer from "../features/coupon/couponSlice";
 import operatorReducer from "../features/operator/operatorSlice";
 import adminReducer from "../features/admin/adminSlice";
+import rewardReducer from "../features/reward/rewardSlice";
 
 
 
@@ -19,6 +20,7 @@ const rootReducer = combineReducers({
   coupon: couponReducer,
   operator: operatorReducer,
   admin: adminReducer,
+  reward: rewardReducer,
 
 });
 

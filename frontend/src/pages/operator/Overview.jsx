@@ -131,11 +131,20 @@ export default function Overview({ buses = [], trips = [], bookings = [], revenu
            <div className="space-y-4">
               <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20">
                  <p className="text-xs font-bold text-blue-200 uppercase tracking-widest">Trips Today</p>
-                 <p className="text-2xl font-black">{trips.filter(t => new Date(t.journeyDate).toDateString() === new Date().toDateString()).length}</p>
+                 <p className="text-2xl font-black">
+                   {trips.filter(t => {
+                     if (!t.journeyDate) return false;
+                     const tripDate = new Date(t.journeyDate);
+                     const today = new Date();
+                     return tripDate.getDate() === today.getDate() &&
+                            tripDate.getMonth() === today.getMonth() &&
+                            tripDate.getFullYear() === today.getFullYear();
+                   }).length}
+                 </p>
               </div>
               <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20">
                  <p className="text-xs font-bold text-blue-200 uppercase tracking-widest">Pending Bookings</p>
-                 <p className="text-2xl font-black">{bookings.filter(b => b.paymentStatus === 'pending' || b.status === 'pending').length}</p>
+                 <p className="text-2xl font-black">{bookings.filter(b => b.paymentStatus === 'pending' || b.bookingStatus === 'pending').length}</p>
               </div>
            </div>
         </div>
@@ -153,8 +162,8 @@ export default function Overview({ buses = [], trips = [], bookings = [], revenu
                       <p className="text-xs text-slate-400 font-semibold">{new Date(t.journeyDate).toLocaleDateString()}</p>
                    </div>
                 </div>
-                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.status === 'scheduled' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                   {t.status}
+                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${t.tripStatus === 'scheduled' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'}`}>
+                   {t.tripStatus || 'SCHEDULED'}
                 </span>
              </div>
            ))}

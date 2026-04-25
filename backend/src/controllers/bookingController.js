@@ -4,7 +4,10 @@ import Booking from "../models/bookingModel.js";
 import Trip from "../models/tripModel.js";
 import Coupon from "../models/couponModel.js";
 import CouponUsage from "../models/couponUsageModel.js";
+import User from "../models/userModel.js";
 import { calculateSecureTotals } from "../services/pricingService.js";
+import { calculateRedeemableCoins } from "../utils/rewardUtils.js";
+import { redeemCoinsForBooking } from "../services/rewardService.js";
 
 const parseDepartureDateTime = (journeyDate, departureTime) => {
   if (!journeyDate || !departureTime) return null;
@@ -52,6 +55,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     passengerDetails,
     paymentMethod,
     couponCode = null,
+    redeemCoins = 0,
   } = req.body;
 
   if (!tripId || !Array.isArray(seats) || seats.length === 0) {
@@ -79,27 +83,51 @@ export const createBooking = asyncHandler(async (req, res) => {
 
   const securePricing = await calculateSecureTotals(tripId, seats.length, couponCode, req.user._id);
 
+  // Reward Redemption Logic
+  let coinsToUse = 0;
+  let rewardDiscount = 0;
+
+  if (redeemCoins > 0) {
+    const user = await User.findById(req.user._id);
+    const availableCoins = user.rewardCoins || 0;
+    
+    // Calculate max possible redemption for this total
+    const maxRedeemable = calculateRedeemableCoins(availableCoins, securePricing.finalAmount);
+    
+    // Use the minimum of (requested, available, maxAllowed)
+    coinsToUse = Math.min(Number(redeemCoins), maxRedeemable);
+    rewardDiscount = coinsToUse; // 1 coin = 1 unit currency
+  }
+
+  const finalPayableAmount = Math.max(0, securePricing.finalAmount - rewardDiscount);
+
   const booking = await Booking.create({
     user: req.user._id,
     trip: tripId,
     seats,
     totalAmount: securePricing.finalAmount,
     originalAmount: securePricing.amountBeforeOffer,
-    finalAmount: securePricing.finalAmount,
-    discountAmount: securePricing.discountAmount,
+    finalAmount: finalPayableAmount,
+    discountAmount: securePricing.discountAmount + rewardDiscount,
+    coinsUsed: coinsToUse,
     couponCode: securePricing.selectedOffer?.couponCode || null,
     offerApplied: securePricing.selectedOffer?.offerApplied || "",
     offerType: securePricing.selectedOffer?.offerType || "none",
     offerMeta: securePricing.selectedOffer?.offerMeta || {},
     firstBookingOfferUsed: securePricing.selectedOffer?.offerType === "first_booking_auto",
     couponUsageCounted: false,
-    paidAmount: securePricing.finalAmount,
+    paidAmount: finalPayableAmount,
     paymentMethod: paymentMethod || "UPI",
     passengerDetails: passengerDetails || [],
     bookingStatus: "confirmed",
     paymentStatus: "paid",
     refundStatus: "not_applicable",
   });
+
+  // Deduct coins if they were used
+  if (coinsToUse > 0) {
+    await redeemCoinsForBooking(req.user._id, booking._id, coinsToUse);
+  }
 
   trip.bookedSeats.push(...seats);
   trip.availableSeats -= seats.length;

@@ -15,6 +15,13 @@ import FavoritesPage from "../pages/FavoritesPage";
 import ProfilePage from "../pages/ProfilePage";
 import OperatorDashboardPage from "../pages/operator/OperatorDashboardPage";
 import AdminDashboardPage from "../pages/admin/AdminDashboardPage";
+import AboutPage from "../pages/AboutPage";
+import ContactPage from "../pages/ContactPage";
+import CareersPage from "../pages/CareersPage";
+import HelpCenterPage from "../pages/HelpCenterPage";
+import CancellationPage from "../pages/CancellationPage";
+import RefundPolicyPage from "../pages/RefundPolicyPage";
+
 
 export default function AppRoutes() {
   return (
@@ -42,6 +49,12 @@ export default function AppRoutes() {
         <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
       </Route>
 
+      <Route path="/about" element={<AboutPage />} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/careers" element={<CareersPage />} />
+      <Route path="/help-center" element={<HelpCenterPage />} />
+      <Route path="/cancellation" element={<CancellationPage />} />
+      <Route path="/refund-policy" element={<RefundPolicyPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

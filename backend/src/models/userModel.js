@@ -71,6 +71,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+
+    rewardCoins: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,

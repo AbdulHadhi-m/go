@@ -2,6 +2,8 @@ import asyncHandler from "express-async-handler";
 import mongoose from "mongoose";
 import Bus from "../../models/busModel.js";
 import Trip from "../../models/tripModel.js";
+import Booking from "../../models/bookingModel.js";
+import { issueRewardForCompletedBooking } from "../../services/rewardService.js";
 import { calcOccupancy, calculateDynamicFare } from "./operatorHelpers.js";
 
 export const createTrip = asyncHandler(async (req, res) => {
@@ -57,7 +59,8 @@ export const createTrip = asyncHandler(async (req, res) => {
     totalSeats: seats,
     availableSeats: seats,
     bookedSeats: [],
-    boardingPoints: boardingPoints || [],
+    boardingPoints: (boardingPoints || []).sort((a, b) => a.sequence - b.sequence),
+    droppingPoints: (req.body.droppingPoints || []).sort((a, b) => a.sequence - b.sequence),
     dynamicPricingEnabled: req.body.dynamicPricingEnabled ?? true,
     weekendMultiplier: req.body.weekendMultiplier || 1.1,
     offers: req.body.offers || [],
@@ -140,6 +143,21 @@ export const markTripCompleted = asyncHandler(async (req, res) => {
 
   trip.tripStatus = "completed";
   await trip.save();
+
+  // Also update all confirmed bookings for this trip to completed
+  const bookings = await Booking.find({ trip: trip._id, bookingStatus: "confirmed" });
+  
+  for (const booking of bookings) {
+    booking.bookingStatus = "completed";
+    await booking.save();
+    
+    // Issue rewards for each completed booking
+    try {
+      await issueRewardForCompletedBooking(booking._id);
+    } catch (error) {
+      console.error(`Failed to issue reward for booking ${booking._id}:`, error);
+    }
+  }
 
   res.status(200).json({ success: true, trip });
 });

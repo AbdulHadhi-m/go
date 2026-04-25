@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import bcrypt from "bcryptjs";
 import User from "../models/userModel.js";
 import generateToken from "../utils/generateToken.js";
+import { createAndSendNotification } from "../services/notificationService.js";
 import Joi from "joi";
 
 const registerSchema = Joi.object({
@@ -62,6 +63,19 @@ export const registerUser = asyncHandler(async (req, res) => {
   const token = generateToken(user._id);
   setTokenCookie(res, token);
 
+  // Trigger Welcome Notification
+  await createAndSendNotification({
+    user: user._id,
+    title: 'Welcome to GoPath!',
+    message: `Hi ${firstName}, welcome to GoPath. Start booking your premium journeys today!`,
+    category: 'account',
+    deliveryChannels: ['in-app', 'email'],
+    emailData: {
+      to: user.email,
+      templateType: 'generic',
+    }
+  });
+
   res.status(201).json({
     success: true,
     user: {
@@ -110,6 +124,20 @@ export const loginUser = asyncHandler(async (req, res) => {
 
   const token = generateToken(user._id);
   setTokenCookie(res, token);
+
+  // Trigger Security Alert
+  await createAndSendNotification({
+    user: user._id,
+    title: 'New Login Detected',
+    message: 'We noticed a new login to your GoPath account. If this wasn\'t you, secure your account.',
+    category: 'account',
+    deliveryChannels: ['in-app', 'email'],
+    emailData: {
+      to: user.email,
+      templateType: 'security_alert',
+      data: { deviceInfo: req.headers['user-agent'] || 'Unknown Device' }
+    }
+  });
 
   res.status(200).json({
     success: true,

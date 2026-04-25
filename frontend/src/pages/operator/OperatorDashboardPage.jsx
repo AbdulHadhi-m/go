@@ -87,7 +87,7 @@ export default function OperatorDashboardPage() {
              ))}
           </nav>
 
-          <div className="mt-auto p-6 pt-0">
+          {/* <div className="mt-auto p-6 pt-0">
              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
                 <p className="text-xs font-bold text-slate-400 mb-1">Operator Profile</p>
                 <div className="flex items-center justify-center gap-2">
@@ -95,7 +95,7 @@ export default function OperatorDashboardPage() {
                    <span className="text-[10px] uppercase font-black tracking-wider text-blue-600">Verified System</span>
                 </div>
              </div>
-          </div>
+          </div> */}
         </aside>
 
         {/* Workspace Canvas Area */}

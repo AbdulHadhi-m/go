@@ -1,6 +1,7 @@
 import asyncHandler from "express-async-handler";
 import bcrypt from "bcryptjs";
 import User from "../models/userModel.js";
+import Booking from "../models/bookingModel.js";
 
 const safeUserResponse = (user, token) => ({
   _id: user._id,
@@ -9,6 +10,7 @@ const safeUserResponse = (user, token) => ({
   email: user.email,
   phone: user.phone || "",
   avatar: user.avatar || "",
+  rewardCoins: user.rewardCoins || 0,
   role: user.role,
   ...(token ? { token } : {}),
 });
@@ -21,9 +23,14 @@ export const getMyProfile = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
+  const tripCount = await Booking.countDocuments({ user: req.user._id, bookingStatus: "completed" });
+
   res.status(200).json({
     success: true,
-    user: safeUserResponse(user, req.user.token),
+    user: {
+      ...safeUserResponse(user, req.user.token),
+      tripCount,
+    },
   });
 });
 

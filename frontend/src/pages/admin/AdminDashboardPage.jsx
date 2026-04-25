@@ -99,7 +99,7 @@ export default function AdminDashboardPage() {
              ))}
           </nav>
 
-          <div className="mt-auto p-6 pt-0 opacity-60 pointer-events-none">
+          {/* <div className="mt-auto p-6 pt-0 opacity-60 pointer-events-none">
              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
                 <p className="text-xs font-bold text-slate-400 mb-1">Server Status</p>
                 <div className="flex items-center justify-center gap-2">
@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
                    <span className="text-[10px] uppercase font-black tracking-wider text-emerald-600">Operational</span>
                 </div>
              </div>
-          </div>
+          </div> */}
         </aside>
 
         {/* Dynamic Canvas Area */}

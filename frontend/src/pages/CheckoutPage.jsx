@@ -7,6 +7,8 @@ import { createBooking } from "../features/bookings/bookingSlice";
 import { applyCoupon, clearCoupon } from "../features/coupon/couponSlice";
 import loadRazorpayScript from "../utils/loadRazorpay";
 import { createOrderAPI, verifyPaymentAPI } from "../services/paymentService";
+import { redeemPreviewAPI } from "../services/rewardService";
+import BusCoinImg from "../assets/buscoin.svg";
 
 export default function CheckoutPage() {
   const location = useLocation();
@@ -20,6 +22,8 @@ export default function CheckoutPage() {
   const trip = location.state?.trip;
   const selectedSeats = location.state?.selectedSeats || [];
   const baseFare = location.state?.totalAmount || 0;
+  const boardingPointId = location.state?.boardingPointId;
+  const droppingPointId = location.state?.droppingPointId;
 
   const [paymentMethod, setPaymentMethod] = useState("UPI");
   const [couponCode, setCouponCode] = useState("");
@@ -31,10 +35,22 @@ export default function CheckoutPage() {
     gender: "Male",
   });
 
+  const [redeemCoins, setRedeemCoins] = useState(0);
+  const [redeemInfo, setRedeemInfo] = useState({
+    userCoins: 0,
+    maxRedeemable: 0,
+    finalAmount: 0
+  });
+  const [isRedeeming, setIsRedeeming] = useState(false);
+
   const tax = useMemo(() => Math.round(baseFare * 0.05), [baseFare]);
   const amountBeforeOffer = Math.max(0, baseFare + tax);
   const offerApplied = couponState.offerType && couponState.offerType !== "none";
-  const total = offerApplied ? couponState.finalAmount : amountBeforeOffer;
+  const amountAfterCoupon = offerApplied ? couponState.finalAmount : amountBeforeOffer;
+  
+  // Final amount after coins
+  const coinsDiscount = isRedeeming ? (Math.min(redeemCoins, redeemInfo.maxRedeemable) * 0.50) : 0;
+  const finalTotal = amountAfterCoupon - coinsDiscount;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -57,6 +73,38 @@ export default function CheckoutPage() {
       })
     );
   }, [dispatch, trip?._id, amountBeforeOffer]);
+
+  useEffect(() => {
+    const fetchRedeemPreview = async () => {
+      if (redeemCoins > 0 && amountAfterCoupon > 0) {
+        try {
+          const data = await redeemPreviewAPI(amountAfterCoupon);
+          if (data.success) {
+            setRedeemInfo({
+              userCoins: data.userCoins,
+              maxRedeemable: data.maxRedeemable,
+              finalAmount: amountAfterCoupon - (Math.min(redeemCoins, data.maxRedeemable) * 0.50)
+            });
+          }
+        } catch (error) {
+          console.error("Failed to fetch redeem preview", error);
+        }
+      } else {
+        setRedeemInfo(prev => ({ ...prev, finalAmount: amountAfterCoupon }));
+      }
+    };
+    fetchRedeemPreview();
+  }, [redeemCoins, amountAfterCoupon]);
+
+  const handleRedeemToggle = (checked) => {
+    setIsRedeeming(checked);
+    if (checked) {
+      // Default to max possible or user balance
+      setRedeemCoins(1); // Trigger preview
+    } else {
+      setRedeemCoins(0);
+    }
+  };
 
   const handlePayNow = async () => {
     if (!trip || selectedSeats.length === 0) {
@@ -92,6 +140,9 @@ export default function CheckoutPage() {
           gender: formData.gender,
         },
       ],
+      boardingPointId,
+      droppingPointId,
+      redeemCoins: isRedeeming ? Math.min(redeemCoins, redeemInfo.maxRedeemable) : 0,
     };
 
     try {
@@ -105,6 +156,9 @@ export default function CheckoutPage() {
         tripId: trip._id,
         seats: selectedSeats,
         couponCode: couponState.coupon || null,
+        boardingPointId,
+        droppingPointId,
+        redeemCoins: isRedeeming ? Math.min(redeemCoins, redeemInfo.maxRedeemable) : 0,
       });
       if (!order || !order.id) {
         toast.error("Server error. Please try again.");
@@ -129,11 +183,14 @@ export default function CheckoutPage() {
             };
 
             const verificationResult = await verifyPaymentAPI(verifyPayload);
-            if (verificationResult.success) {
-              toast.success("Payment successful! Booking confirmed.");
-              dispatch(clearCoupon());
-              navigate("/my-bookings");
-            } else {
+              if (verificationResult.success) {
+                if (isRedeeming && coinsDiscount > 0) {
+                   toast.success(`You saved ₹${coinsDiscount} using GoCoins 🎉`);
+                }
+                toast.success("Payment successful! Booking confirmed.");
+                dispatch(clearCoupon());
+                navigate("/my-bookings");
+              } else {
               toast.error("Payment verification failed.");
             }
           } catch (error) {
@@ -344,6 +401,44 @@ export default function CheckoutPage() {
                 )}
               </div>
 
+              {/* GoCoins Redemption Section */}
+              <div className="mt-4 rounded-2xl bg-amber-50 p-3 ring-1 ring-amber-100">
+                 <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                       <img src={BusCoinImg} alt="coin" className="w-5 h-5" />
+                       <span className="text-xs font-black text-amber-700 uppercase tracking-tight">GoCoins Wallet</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                       <input type="checkbox" checked={isRedeeming} onChange={(e) => handleRedeemToggle(e.target.checked)} className="sr-only peer" />
+                       <div className="w-9 h-5 bg-amber-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                    </label>
+                 </div>
+                 
+                 {isRedeeming ? (
+                    <div className="mt-3 space-y-3">
+                       <p className="text-[10px] text-amber-600 font-bold uppercase">Use your GoCoins to get instant discount</p>
+                       <div className="flex items-center gap-4">
+                          <input 
+                            type="range" 
+                            min="0" 
+                            max={redeemInfo.maxRedeemable} 
+                            value={redeemCoins} 
+                            onChange={(e) => setRedeemCoins(Number(e.target.value))}
+                            className="flex-1 h-1.5 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600"
+                          />
+                          <span className="text-sm font-black text-amber-700 w-10 text-right">{redeemCoins}</span>
+                       </div>
+                       <div className="flex justify-between text-[10px] font-bold text-amber-500 uppercase tracking-widest">
+                          <span>Max: {redeemInfo.maxRedeemable} Coins</span>
+                          <span>1 Coin = ₹0.50</span>
+                       </div>
+                       <p className="text-[9px] text-amber-400 italic">Max 50% discount allowed using coins</p>
+                    </div>
+                 ) : (
+                    <p className="mt-2 text-[10px] text-amber-600/70 font-semibold italic">Available: {user?.rewardCoins || 0} Coins</p>
+                 )}
+              </div>
+
               <div className="mt-5 space-y-4 text-sm text-slate-600">
                 <div className="flex justify-between">
                   <span>Route</span>
@@ -379,6 +474,13 @@ export default function CheckoutPage() {
                   <span>-₹{couponState.discountAmount || 0}</span>
                 </div>
 
+                {isRedeeming && (
+                   <div className="flex justify-between text-amber-600 font-bold">
+                      <span>GoCoins Used</span>
+                      <span>-₹{coinsDiscount}</span>
+                   </div>
+                )}
+
                 {offerApplied && (
                   <div className="rounded-xl bg-red-50 px-3 py-2 text-xs text-red-700">
                     {couponState.selectedOfferReason}
@@ -387,7 +489,7 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between border-t pt-4 text-base font-bold text-slate-900">
                   <span>Total</span>
-                  <span>₹{total}</span>
+                  <span>₹{finalTotal}</span>
                 </div>
               </div>
 

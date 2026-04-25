@@ -13,6 +13,9 @@ import couponRoutes from "./routes/couponRoutes.js";
 import operatorRoutes from "./routes/operatorRoutes.js";
 import adminRoutes from "./routes/adminRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
+import rewardRoutes from "./routes/rewardRoutes.js";
 import { notFound, errorHandler } from "./middleware/errorMiddleware.js";
 
 const app = express();
@@ -55,6 +58,9 @@ app.use("/api/coupons", couponRoutes);
 app.use("/api/operator", operatorRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/complaints", complaintRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/reviews", reviewRoutes);
+app.use("/api/rewards", rewardRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

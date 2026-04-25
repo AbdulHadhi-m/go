@@ -107,13 +107,14 @@ const bookingSchema = new mongoose.Schema(
       type: String,
       default: "UPI",
     },
-    passengerDetails: [
-      {
-        name: String,
-        age: Number,
-        gender: String,
-      },
-    ],
+    rewardGiven: {
+      type: Boolean,
+      default: false,
+    },
+    coinsUsed: {
+      type: Number,
+      default: 0,
+    },
   },
   { timestamps: true }
 );
