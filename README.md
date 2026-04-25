@@ -4,6 +4,7 @@
 
 ---
 
+
 ## 📌 Overview
 
 **GoPath** is a full-stack bus booking platform built using the **MERN stack (MongoDB, Express, React, Node.js)**.
@@ -20,35 +21,42 @@ It provides a real-world booking experience with:
 ## ✨ Features
 
 ### 👤 User
-- 🔐 JWT Authentication (Login/Register)
-- 🔍 Search buses with filters (price, timing, type)
+
+- 🔍 Search buses with advanced filters (price, timing, type)
+- 🔐 JWT Authentication (Login/Register, Google OAuth, validation)
 - 💺 Interactive seat selection
+- 📍 Boarding & dropping point selection
 - 🎟️ Booking & ticket management
 - 💳 Razorpay payment integration
+- 🏷️ Coupons & discount system
 - 🪙 GoCoins reward system (3% cashback)
-- 🏷️ Coupons & discounts
-- ⭐ Ratings & reviews
+- 🎁 First booking offer (10% discount)
+- ⭐ Ratings & reviews (verified users)
 - 🔔 Real-time notifications (Socket.IO)
 - 📩 Email alerts (Nodemailer)
+- 📄 Download ticket as PDF
 - ❌ Booking cancellation & refunds
 
 ---
 
 ### 🚌 Operator
+
 - ➕ Add & manage buses
-- 📅 Schedule trips
-- 📊 View bookings & revenue
-- 📋 Passenger manifest
+- 📅 Schedule and manage trips
+- 📊 View bookings & revenue analytics
+- 📋 Passenger manifest (trip-wise)
+- 📈 Graph-based insights dashboard
 
 ---
 
 ### 🛠️ Admin
-- 👥 Manage users & operators
-- 🎯 Manage coupons & offers
-- 📊 Platform analytics
-- 🎫 Support/complaint system
 
----
+- 👥 Manage users & operators
+- 🎯 Manage coupons & promotional offers
+- 📊 Platform-wide analytics dashboard
+- 🎫 Support & complaint management system
+
+
 
 ## 🪙 GoCoins System
 
