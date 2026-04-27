@@ -7,7 +7,7 @@ import CouponUsage from "../models/couponUsageModel.js";
 import User from "../models/userModel.js";
 import { calculateSecureTotals } from "../services/pricingService.js";
 import { calculateRedeemableCoins } from "../utils/rewardUtils.js";
-import { redeemCoinsForBooking } from "../services/rewardService.js";
+import { finalizeBookingOperations } from "../services/bookingCoreService.js";
 
 const parseDepartureDateTime = (journeyDate, departureTime) => {
   if (!journeyDate || !departureTime) return null;
@@ -56,6 +56,8 @@ export const createBooking = asyncHandler(async (req, res) => {
     paymentMethod,
     couponCode = null,
     redeemCoins = 0,
+    boardingPointId,
+    droppingPointId,
   } = req.body;
 
   if (!tripId || !Array.isArray(seats) || seats.length === 0) {
@@ -81,7 +83,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw new Error("Not enough seats available");
   }
 
-  const securePricing = await calculateSecureTotals(tripId, seats.length, couponCode, req.user._id);
+  const securePricing = await calculateSecureTotals(tripId, seats.length, couponCode, req.user._id, boardingPointId, droppingPointId);
 
   // Reward Redemption Logic
   let coinsToUse = 0;
@@ -119,43 +121,15 @@ export const createBooking = asyncHandler(async (req, res) => {
     paidAmount: finalPayableAmount,
     paymentMethod: paymentMethod || "UPI",
     passengerDetails: passengerDetails || [],
+    boardingPoint: securePricing.boardingPoint,
+    droppingPoint: securePricing.droppingPoint,
     bookingStatus: "confirmed",
     paymentStatus: "paid",
     refundStatus: "not_applicable",
   });
 
-  // Deduct coins if they were used
-  if (coinsToUse > 0) {
-    await redeemCoinsForBooking(req.user._id, booking._id, coinsToUse);
-  }
-
-  trip.bookedSeats.push(...seats);
-  trip.availableSeats -= seats.length;
-
-  await trip.save();
-
-  if (booking.couponCode && booking.offerType === "coupon" && !booking.couponUsageCounted) {
-    const couponDoc = await Coupon.findOneAndUpdate(
-      {
-        code: booking.couponCode,
-        ...(booking.offerMeta?.couponId ? { _id: booking.offerMeta.couponId } : {}),
-      },
-      { $inc: { usedCount: 1 } },
-      { new: true }
-    );
-    
-    if (couponDoc) {
-      booking.appliedCoupon = couponDoc._id;
-      await CouponUsage.create({
-        user: req.user._id,
-        coupon: couponDoc._id,
-        booking: booking._id,
-      });
-    }
-
-    booking.couponUsageCounted = true;
-    await booking.save();
-  }
+  // Finalize booking (seats, coins, coupons)
+  await finalizeBookingOperations(booking, trip, coinsToUse, req.user);
 
   const populatedBooking = await Booking.findById(booking._id)
     .populate("trip")

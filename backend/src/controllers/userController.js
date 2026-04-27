@@ -129,7 +129,6 @@ export const uploadAvatar = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  console.log("Uploaded file details:", req.file);
 
   // Cloudinary returns the uploaded image URL in req.file.path
   user.avatar = req.file.path || req.file.secure_url;

@@ -11,6 +11,7 @@ import { createAndSendNotification } from "../services/notificationService.js";
 import User from "../models/userModel.js";
 import { calculateRedeemableCoins } from "../utils/rewardUtils.js";
 import { redeemCoinsForBooking, issueRewardForCompletedBooking } from "../services/rewardService.js";
+import { finalizeBookingOperations } from "../services/bookingCoreService.js";
 
 // POST /api/payments/create-order
 export const createRazorpayOrder = asyncHandler(async (req, res) => {
@@ -137,15 +138,6 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     paymentStatus: "paid",
   });
 
-  // Deduct coins if they were used
-  if (coinsToUse > 0) {
-    await redeemCoinsForBooking(req.user._id, booking._id, coinsToUse);
-  }
-
-  trip.bookedSeats.push(...seats);
-  trip.availableSeats -= seats.length;
-  await trip.save();
-
   await Payment.create({
     user: req.user._id,
     booking: booking._id,
@@ -156,28 +148,8 @@ export const verifyRazorpayPayment = asyncHandler(async (req, res) => {
     orderId: razorpay_order_id,
   });
 
-  if (booking.couponCode && booking.offerType === "coupon" && !booking.couponUsageCounted) {
-    const couponDoc = await Coupon.findOneAndUpdate(
-      {
-        code: booking.couponCode,
-        ...(booking.offerMeta?.couponId ? { _id: booking.offerMeta.couponId } : {}),
-      },
-      { $inc: { usedCount: 1 } },
-      { new: true }
-    );
-    
-    if (couponDoc) {
-      booking.appliedCoupon = couponDoc._id;
-      await CouponUsage.create({
-        user: req.user._id,
-        coupon: couponDoc._id,
-        booking: booking._id,
-      });
-    }
-
-    booking.couponUsageCounted = true;
-    await booking.save();
-  }
+  // Finalize booking (seats, coins, coupons)
+  await finalizeBookingOperations(booking, trip, coinsToUse, req.user);
 
   const populatedBooking = await Booking.findById(booking._id)
     .populate("trip")

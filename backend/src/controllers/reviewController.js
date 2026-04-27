@@ -129,7 +129,7 @@ export const addReview = asyncHandler(async (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: "Review added! Proper work!",
+    message: "Review added successfully",
     data: newReview,
   });
 });

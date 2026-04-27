@@ -30,12 +30,17 @@ import {
 } from "../features/user/userSlice";
 import { setAuthUser, logoutUser } from "../features/auth/authSlice";
 import { getRewardBalance, getRewardHistory } from "../features/reward/rewardSlice";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import axiosInstance from "../services/axiosInstance";
+import { io } from "socket.io-client";
 import BusCoinImg from "../assets/buscoin.svg";
+
+const SOCKET_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
 
 export default function ProfilePage() {
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useSelector((state) => state.auth);
   const { profile, isLoading: profileLoading, isError, isSuccess, message } = useSelector(
     (state) => state.user
@@ -46,8 +51,16 @@ export default function ProfilePage() {
 
   const isLoading = profileLoading || rewardLoading;
 
-  const [activeTab, setActiveTab] = useState("my-profile");
+  const searchParams = new URLSearchParams(location.search);
+  const initialTab = searchParams.get("tab") || "my-profile";
+
+  const [activeTab, setActiveTab] = useState(initialTab);
   const fileInputRef = useRef(null);
+
+  const handleTabChange = (tabId) => {
+    setActiveTab(tabId);
+    navigate(`/profile?tab=${tabId}`, { replace: true });
+  };
 
   const [formData, setFormData] = useState({
     firstName: "",
@@ -67,6 +80,49 @@ export default function ProfilePage() {
     confirmPassword: "",
   });
 
+  const [notifications, setNotifications] = useState([]);
+  const [loadingNotifications, setLoadingNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      try {
+        const { data } = await axiosInstance.get('/notifications/unread-count');
+        setUnreadCount(data.count || 0);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchUnreadCount();
+  }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      setLoadingNotifications(true);
+      const { data } = await axiosInstance.get('/notifications');
+      setNotifications(data.notifications || []);
+      setUnreadCount(0);
+      window.dispatchEvent(new CustomEvent('notifications_read'));
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load notifications");
+    } finally {
+      setLoadingNotifications(false);
+    }
+  };
+
+  const markAllAsRead = async () => {
+    try {
+      await axiosInstance.patch('/notifications/read-all');
+      setNotifications(notifications.map(n => ({ ...n, isRead: true })));
+      setUnreadCount(0);
+      toast.success("All notifications marked as read");
+      window.dispatchEvent(new CustomEvent('notifications_read'));
+    } catch (err) {
+      toast.error("Failed to mark notifications as read");
+    }
+  };
+
   useEffect(() => {
     dispatch(getMyProfile());
     dispatch(getRewardBalance());
@@ -76,7 +132,42 @@ export default function ProfilePage() {
     if (activeTab === "rewards") {
       dispatch(getRewardHistory());
     }
+    if (activeTab === "notifications") {
+      fetchNotifications();
+    }
   }, [dispatch, activeTab]);
+
+  // Real-time socket listener for notifications
+  useEffect(() => {
+    let socket;
+    if (user && user._id) {
+      socket = io(SOCKET_URL, {
+        withCredentials: true,
+      });
+
+      socket.on('connect', () => {
+        socket.emit('join_user_room', user._id);
+      });
+
+      socket.on('new_notification', (data) => {
+        setNotifications((prev) => {
+          // Check if it already exists to avoid duplicates
+          if (prev.find(n => n._id === data._id)) return prev;
+          return [data, ...prev];
+        });
+        setUnreadCount(prev => prev + 1);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        if(user && user._id) {
+            socket.emit('leave_user_room', user._id);
+        }
+        socket.disconnect();
+      }
+    };
+  }, [user]);
 
   useEffect(() => {
     if (profile) {
@@ -250,14 +341,21 @@ export default function ProfilePage() {
                        {tabs.map(tab => (
                          <button
                            key={tab.id}
-                           onClick={() => setActiveTab(tab.id)}
+                           onClick={() => handleTabChange(tab.id)}
                            className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl font-bold text-sm transition-all duration-300
                             ${activeTab === tab.id 
                                ? 'bg-red-50 text-red-600 shadow-inner' 
                                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}
                          >
                            <div className="flex items-center gap-4">
-                              <span className={activeTab === tab.id ? 'text-red-600' : 'text-slate-400'}>{tab.icon}</span>
+                              <div className="relative">
+                                <span className={activeTab === tab.id ? 'text-red-600' : 'text-slate-400'}>{tab.icon}</span>
+                                {tab.id === 'notifications' && unreadCount > 0 && (
+                                  <span className="absolute -right-1.5 -top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-blue-600 px-1 text-[9px] font-bold text-white shadow-sm ring-2 ring-white">
+                                    {unreadCount > 99 ? '99+' : unreadCount}
+                                  </span>
+                                )}
+                              </div>
                               {tab.label}
                            </div>
                            <ChevronRight size={16} className={`opacity-40 transition-transform ${activeTab === tab.id ? 'translate-x-1' : ''}`} />
@@ -478,6 +576,52 @@ export default function ProfilePage() {
                           </button>
                        </div>
                     </div>
+                 )}
+
+                 {activeTab === 'notifications' && (
+                   <div className="space-y-8 animate-in fade-in">
+                      <div className="border-b border-slate-100 pb-8 flex justify-between items-center">
+                         <div>
+                            <h2 className="text-2xl font-black text-slate-900 capitalize">Notifications</h2>
+                            <p className="text-sm text-slate-400 font-semibold mt-1">Stay updated with your bookings and offers.</p>
+                         </div>
+                         {notifications.some(n => !n.isRead) && (
+                           <button onClick={markAllAsRead} className="text-xs font-bold text-red-600 bg-red-50 px-4 py-2 rounded-full hover:bg-red-100 transition">
+                             Mark all as read
+                           </button>
+                         )}
+                      </div>
+
+                      {loadingNotifications ? (
+                        <div className="flex justify-center p-12">
+                           <div className="w-8 h-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      ) : notifications.length > 0 ? (
+                        <div className="space-y-4">
+                           {notifications.map((notif) => (
+                             <div key={notif._id} className={`p-5 rounded-2xl border transition-all ${notif.isRead ? 'bg-white border-slate-100 opacity-70' : 'bg-red-50/30 border-red-100 shadow-sm'}`}>
+                                <div className="flex gap-4">
+                                   <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${notif.isRead ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-600'}`}>
+                                      <Bell size={18} />
+                                   </div>
+                                   <div>
+                                      <h4 className={`font-bold ${notif.isRead ? 'text-slate-700' : 'text-slate-900'}`}>{notif.title}</h4>
+                                      <p className="text-sm text-slate-500 mt-1">{notif.message}</p>
+                                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-3">
+                                        {new Date(notif.createdAt).toLocaleDateString()} • {new Date(notif.createdAt).toLocaleTimeString()}
+                                      </p>
+                                   </div>
+                                </div>
+                             </div>
+                           ))}
+                        </div>
+                      ) : (
+                        <div className="p-12 text-center border-2 border-dashed border-slate-100 rounded-[2.5rem]">
+                           <Bell className="mx-auto text-slate-300 mb-4" size={40} />
+                           <p className="text-slate-400 font-bold">You have no notifications right now.</p>
+                        </div>
+                      )}
+                   </div>
                  )}
 
               </main>

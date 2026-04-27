@@ -18,6 +18,30 @@ const bookingSchema = new mongoose.Schema(
         required: true,
       },
     ],
+    passengerDetails: [
+      {
+        name: {
+          type: String,
+          required: true,
+        },
+        age: {
+          type: Number,
+          required: true,
+        },
+        gender: {
+          type: String,
+          required: true,
+        },
+      },
+    ],
+    boardingPoint: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+    droppingPoint: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
     totalAmount: {
       type: Number,
       required: true,

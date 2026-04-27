@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import MainLayout from "../components/layout/MainLayout";
 import { getTripById, getTripSeats } from "../features/trips/tripSlice";
+import { calculateDuration, formatJourneyDate, getWindowSeatsCount } from "../utils/seatUtils";
 
 export default function TripDetailsPage() {
   const dispatch = useDispatch();
@@ -57,7 +58,12 @@ export default function TripDetailsPage() {
     dispatch(getTripSeats(id));
   }, [dispatch, id]);
 
-  const bookedSeats = seatsData?.bookedSeats || [];
+  const bookedSeats = seatsData?.bookedSeats || trip?.bookedSeats || [];
+  
+  const duration = calculateDuration(trip?.departureTime, trip?.arrivalTime);
+  const journeyDateFormatted = formatJourneyDate(trip?.journeyDate);
+  const windowSeatsLeft = getWindowSeatsCount(trip, bookedSeats);
+  const totalSeatsLeft = trip?.availableSeats !== undefined ? trip.availableSeats : (trip?.totalSeats - bookedSeats.length) || 19;
 
   const handleSeatClick = (seat) => {
     if (bookedSeats.includes(seat)) return;
@@ -129,10 +135,10 @@ export default function TripDetailsPage() {
                     <p className="mt-1 text-sm text-slate-500">{trip?.busType || "A/C Seater / Sleeper (2+1)"}</p>
                     <div className="mt-3 flex items-center gap-2">
                       <div className="flex items-center gap-1 rounded bg-[#01b559] px-2 py-0.5 text-xs font-bold text-white">
-                        <span>4.9/5</span>
+                        <span>{trip?.bus?.averageRating || 0}/5</span>
                       </div>
                       <p className="text-xs font-medium text-[#01b559]">
-                        ★ People choice for • New Bus
+                        ★ People choice for • {trip?.bus?.numberOfReviews || 0} reviews
                       </p>
                     </div>
                   </div>
@@ -143,9 +149,8 @@ export default function TripDetailsPage() {
                       <p className="text-sm text-slate-500">{trip?.from || "Aristo Junction"}</p>
                     </div>
                   </div>
-                  
                   <div className="hidden md:flex flex-col items-center justify-center px-4">
-                    <p className="text-sm text-slate-400">8h 45m</p>
+                    <p className="text-sm text-slate-400">{duration}</p>
                     <div className="w-32 h-[2px] bg-slate-200 mt-2 relative">
                         <div className="absolute -left-1.5 -top-1.5 w-3.5 h-3.5 rounded-full bg-slate-200"></div>
                         <div className="absolute -right-1.5 -top-1.5 w-3.5 h-3.5 rounded-full border-2 border-slate-200 bg-white"></div>
@@ -154,7 +159,7 @@ export default function TripDetailsPage() {
 
                   <div className="flex-1 flex justify-center text-center">
                     <div>
-                      <p className="text-xs text-slate-500">19th Apr</p>
+                      <p className="text-xs text-slate-500">{journeyDateFormatted}</p>
                       <h3 className="text-2xl font-bold text-slate-900">{trip?.arrivalTime || "04:15"}</h3>
                       <p className="text-sm text-slate-500">{trip?.to || "Malappuram"}</p>
                     </div>
@@ -165,8 +170,8 @@ export default function TripDetailsPage() {
                   </div>
 
                   <div className="flex-1 flex flex-col items-end">
-                    <p className="text-sm text-slate-600 flex items-center gap-1">13 window seats <ShieldCheck size={14} className="text-slate-400" /></p>
-                    <p className="text-sm font-medium text-slate-500 mb-2">Total {trip?.availableSeats || 19} seats left</p>
+                    <p className="text-sm text-slate-600 flex items-center gap-1">{windowSeatsLeft} window seats <ShieldCheck size={14} className="text-slate-400" /></p>
+                    <p className="text-sm font-medium text-slate-500 mb-2">Total {totalSeatsLeft} seats left</p>
                     <button 
                       onClick={() => setIsExpanded(!isExpanded)}
                       className="rounded px-6 py-2 text-sm font-bold text-white shadow-sm transition-all bg-[#ff7043] hover:bg-[#eb6136]"
@@ -277,10 +282,7 @@ export default function TripDetailsPage() {
                             <div className="flex items-center gap-2"><div className="h-4 w-4 bg-[#3366cc] rounded-sm"></div> Men</div>
                             <div className="flex gap-2 w-full mt-2 lg:mt-0 lg:w-auto lg:ml-auto">
                                 <button className="bg-[#3366cc] text-white px-3 py-1 text-xs rounded shadow-sm">All</button>
-                                <button className="bg-white text-slate-600 px-3 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50">₹ 900</button>
-                                <button className="bg-white text-slate-600 px-3 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50">₹ 1100</button>
-                                <button className="bg-white text-slate-600 px-3 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50">₹ 1200</button>
-                                <button className="bg-white text-slate-600 px-3 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50">₹ 1300</button>
+                                <button className="bg-white text-slate-600 px-3 py-1 text-xs rounded border border-slate-200 hover:bg-slate-50">₹ {trip?.fare || 900}</button>
                             </div>
                           </div>
 
@@ -635,11 +637,15 @@ export default function TripDetailsPage() {
 
                     {activeTab === "amenities" && (
                       <div className="bg-white p-8 rounded-xl border border-slate-200 flex flex-wrap gap-4">
-                          <span className="border border-slate-200 text-slate-700 bg-slate-50 rounded-lg px-5 py-3 font-semibold shadow-sm flex items-center gap-2"><Wifi size={18} className="text-blue-500" /> Wifi</span>
-                          <span className="border border-slate-200 text-slate-700 bg-slate-50 rounded-lg px-5 py-3 font-semibold shadow-sm flex items-center gap-2"><Droplet size={18} className="text-blue-500" /> Water Bottle</span>
-                          <span className="border border-slate-200 text-slate-700 bg-slate-50 rounded-lg px-5 py-3 font-semibold shadow-sm flex items-center gap-2"><Bed size={18} className="text-blue-500" /> Blanket</span>
-                          <span className="border border-slate-200 text-slate-700 bg-slate-50 rounded-lg px-5 py-3 font-semibold shadow-sm flex items-center gap-2"><PlugZap size={18} className="text-blue-500" /> Charging Point</span>
-                          <span className="border border-slate-200 text-slate-700 bg-slate-50 rounded-lg px-5 py-3 font-semibold shadow-sm flex items-center gap-2"><Film size={18} className="text-blue-500" /> Movie</span>
+                          {trip?.bus?.amenities && trip.bus.amenities.length > 0 ? (
+                            trip.bus.amenities.map((amenity, index) => (
+                              <span key={index} className="border border-slate-200 text-slate-700 bg-slate-50 rounded-lg px-5 py-3 font-semibold shadow-sm flex items-center gap-2">
+                                <CheckCircle2 size={18} className="text-blue-500" /> {amenity}
+                              </span>
+                            ))
+                          ) : (
+                            <p className="text-slate-500">No amenities listed.</p>
+                          )}
                       </div>
                     )}
                   </div>

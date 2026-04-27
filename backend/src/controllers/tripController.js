@@ -31,7 +31,7 @@ export const getAllTrips = asyncHandler(async (req, res) => {
   const trips = await Trip.find({
     ...filter,
     tripStatus: { $ne: "cancelled" },
-  }).sort({ journeyDate: 1 });
+  }).populate('bus', 'averageRating numberOfReviews amenities').sort({ journeyDate: 1 });
   res.json(trips);
 });
 
@@ -39,7 +39,7 @@ export const getAllTrips = asyncHandler(async (req, res) => {
 // @route   GET /api/trips/:id
 // @access  Public
 export const getTripById = asyncHandler(async (req, res) => {
-  const trip = await Trip.findById(req.params.id);
+  const trip = await Trip.findById(req.params.id).populate('bus', 'averageRating numberOfReviews amenities');
 
   if (!trip) {
     res.status(404);

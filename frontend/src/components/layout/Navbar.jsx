@@ -17,6 +17,10 @@ import {
   selectIsAuthenticated,
   selectUser,
 } from "../../features/auth/authSelectors";
+import axiosInstance from "../../services/axiosInstance";
+import { io } from "socket.io-client";
+
+const SOCKET_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api', '') : 'http://localhost:5000';
 
 export default function Navbar() {
   const dispatch = useDispatch();
@@ -27,6 +31,51 @@ export default function Navbar() {
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      const fetchUnreadCount = async () => {
+        try {
+          const { data } = await axiosInstance.get('/notifications/unread-count');
+          setUnreadCount(data.count || 0);
+        } catch (error) {
+          console.error("Failed to fetch unread count", error);
+        }
+      };
+      fetchUnreadCount();
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    let socket;
+    if (user && user._id) {
+      socket = io(SOCKET_URL, {
+        withCredentials: true,
+      });
+
+      socket.on('connect', () => {
+        socket.emit('join_user_room', user._id);
+      });
+
+      socket.on('new_notification', () => {
+        setUnreadCount(prev => prev + 1);
+      });
+    }
+
+    return () => {
+      if (socket) {
+        if(user && user._id) socket.emit('leave_user_room', user._id);
+        socket.disconnect();
+      }
+    };
+  }, [user]);
+
+  useEffect(() => {
+    const handleNotificationsRead = () => setUnreadCount(0);
+    window.addEventListener('notifications_read', handleNotificationsRead);
+    return () => window.removeEventListener('notifications_read', handleNotificationsRead);
+  }, []);
 
   const handleLogout = async () => {
     await dispatch(logoutUser());
@@ -97,9 +146,14 @@ export default function Navbar() {
                 {/* Hamburger Menu */}
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex h-11 w-11 items-center justify-center rounded-full bg-red-50 text-red-600 transition hover:bg-red-100 focus:outline-none"
+                  className="relative flex h-11 w-11 items-center justify-center rounded-full bg-red-50 text-red-600 transition hover:bg-red-100 focus:outline-none"
                 >
                   <Menu size={20} />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white shadow-sm ring-2 ring-white">
+                      {unreadCount > 99 ? '99+' : unreadCount}
+                    </span>
+                  )}
                 </button>
 
                 {/* Avatar */}
@@ -159,13 +213,20 @@ export default function Navbar() {
                       <NavLink
                         to="/profile"
                         onClick={() => setIsDropdownOpen(false)}
-                        className="group flex w-full items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
+                        className="group flex w-full items-center justify-between rounded-xl px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-red-50 hover:text-red-600"
                       >
-                        <User
-                          size={16}
-                          className="text-slate-400 group-hover:text-red-500"
-                        />
-                        Profile
+                        <div className="flex items-center gap-3">
+                          <User
+                            size={16}
+                            className="text-slate-400 group-hover:text-red-500"
+                          />
+                          Profile
+                        </div>
+                        {unreadCount > 0 && (
+                          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-blue-600 px-1 text-[10px] font-bold text-white">
+                            {unreadCount > 99 ? '99+' : unreadCount}
+                          </span>
+                        )}
                       </NavLink>
 
                       {user?.role !== "admin" && user?.role !== "operator" && (

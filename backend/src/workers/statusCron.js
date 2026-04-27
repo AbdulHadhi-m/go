@@ -9,8 +9,8 @@ import dayjs from "dayjs";
  * and marks them, and their related bookings as 'completed'
  */
 export const startStatusSweepCron = () => {
-  // Run every hour at minute 0
-  cron.schedule("0 * * * *", async () => {
+  // Run every minute
+  cron.schedule("* * * * *", async () => {
     await performStatusSweep();
   });
 
@@ -24,13 +24,63 @@ export const performStatusSweep = async () => {
   try {
     console.log("[🗓️ Auto-Sweeper] Running status update check...");
     
-    // Any trip where journeyDate is in the past compared to right now
-    const now = dayjs().toDate();
+    const now = dayjs();
 
-    // Find all scheduled/live trips that are strictly in the past
-    const pastTrips = await Trip.find({
+    // Find all scheduled/live trips
+    const activeTrips = await Trip.find({
       tripStatus: { $in: ["scheduled", "live"] },
-      journeyDate: { $lt: now },
+    });
+
+    const pastTrips = activeTrips.filter((trip) => {
+      if (!trip.journeyDate || !trip.arrivalTime) return false;
+
+      const datePart = dayjs(trip.journeyDate);
+      const timeStr = trip.arrivalTime.trim();
+      const match12h = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+      const match24h = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+
+      let hours = 0;
+      let minutes = 0;
+
+      if (match12h) {
+        hours = parseInt(match12h[1], 10);
+        minutes = parseInt(match12h[2], 10);
+        const ampm = match12h[3].toUpperCase();
+        if (hours === 12) hours = 0;
+        if (ampm === "PM") hours += 12;
+      } else if (match24h) {
+        hours = parseInt(match24h[1], 10);
+        minutes = parseInt(match24h[2], 10);
+      } else {
+        return false;
+      }
+
+      let arrivalDate = datePart.hour(hours).minute(minutes).second(0);
+
+      // Handle overnight trips
+      if (trip.departureTime) {
+        const depStr = trip.departureTime.trim();
+        const depMatch12h = depStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+        const depMatch24h = depStr.match(/^(\d{1,2}):(\d{2})$/);
+        let depH = 0;
+        let depM = 0;
+
+        if (depMatch12h) {
+          depH = parseInt(depMatch12h[1], 10);
+          depM = parseInt(depMatch12h[2], 10);
+          if (depH === 12) depH = 0;
+          if (depMatch12h[3].toUpperCase() === "PM") depH += 12;
+        } else if (depMatch24h) {
+          depH = parseInt(depMatch24h[1], 10);
+          depM = parseInt(depMatch24h[2], 10);
+        }
+
+        if (hours < depH || (hours === depH && minutes < depM)) {
+          arrivalDate = arrivalDate.add(1, "day");
+        }
+      }
+
+      return arrivalDate.isBefore(now);
     });
 
       if (pastTrips.length === 0) {

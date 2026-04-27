@@ -1,9 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ShieldCheck, ChevronDown } from "lucide-react";
 import FavoriteButton from "../common/FavoriteButton";
+import { calculateDuration, formatJourneyDate, getWindowSeatsCount } from "../../utils/seatUtils";
 
 export default function BusCard({ bus }) {
   const navigate = useNavigate();
+
+  const duration = calculateDuration(bus.departureTime, bus.arrivalTime);
+  const journeyDateFormatted = formatJourneyDate(bus.journeyDate);
+  const windowSeatsLeft = getWindowSeatsCount(bus, bus.bookedSeats);
+  const totalSeatsLeft = bus.availableSeats !== undefined ? bus.availableSeats : (bus.totalSeats - (bus.bookedSeats?.length || 0)) || 19;
 
   return (
     <div className="overflow-hidden bg-white shadow-sm ring-1 ring-slate-200 mb-4 transition hover:shadow-md">
@@ -17,10 +23,10 @@ export default function BusCard({ bus }) {
             <p className="mt-1 text-sm text-slate-500 truncate">{bus.busType || bus.type || "A/C Seater / Sleeper"}</p>
             <div className="mt-3 flex items-center gap-2">
               <div className="flex items-center gap-1 rounded bg-[#01b559] px-2 py-0.5 text-xs font-bold text-white">
-                <span>4.9/5</span>
+                <span>{bus.bus?.averageRating || bus.averageRating || 0}/5</span>
               </div>
               <p className="text-xs font-medium text-[#01b559]">
-                ★ People choice for • New Bus
+                ★ People choice for • {bus.bus?.numberOfReviews || 0} reviews
               </p>
             </div>
           </div>
@@ -33,7 +39,7 @@ export default function BusCard({ bus }) {
           </div>
           
           <div className="hidden md:flex flex-col items-center justify-center px-4">
-            <p className="text-sm text-slate-400">8h 45m</p>
+            <p className="text-sm text-slate-400">{duration}</p>
             <div className="w-32 h-[2px] bg-slate-200 mt-2 relative">
                 <div className="absolute -left-1.5 -top-1.5 w-3.5 h-3.5 rounded-full bg-slate-200"></div>
                 <div className="absolute -right-1.5 -top-1.5 w-3.5 h-3.5 rounded-full border-2 border-slate-200 bg-white"></div>
@@ -42,7 +48,7 @@ export default function BusCard({ bus }) {
 
           <div className="flex-1 flex justify-center text-center">
             <div>
-              <p className="text-xs text-slate-500">19th Apr</p>
+              <p className="text-xs text-slate-500">{journeyDateFormatted}</p>
               <h3 className="text-2xl font-bold text-slate-900">{bus.arrivalTime}</h3>
               <p className="text-sm text-slate-500">{bus.to}</p>
             </div>
@@ -53,8 +59,8 @@ export default function BusCard({ bus }) {
           </div>
 
           <div className="flex-1 flex flex-col items-end">
-            <p className="text-sm text-slate-600 flex items-center gap-1">13 window seats <ShieldCheck size={14} className="text-slate-400" /></p>
-            <p className="text-sm font-medium text-slate-500 mb-2">Total {bus.availableSeats || 19} seats left</p>
+            <p className="text-sm text-slate-600 flex items-center gap-1">{windowSeatsLeft} window seats <ShieldCheck size={14} className="text-slate-400" /></p>
+            <p className="text-sm font-medium text-slate-500 mb-2">Total {totalSeatsLeft} seats left</p>
             <Link 
               to={`/trip/${bus.id || bus._id}`}
               className="rounded px-6 py-2 text-sm font-bold text-white shadow-sm transition-all bg-[#ff7043] hover:bg-[#eb6136]"
