@@ -14,25 +14,7 @@ import {
   Ticket,
 } from "lucide-react";
 
-const SUGGESTED_CITIES = [
-  "Bangalore",
-  "Calicut",
-  "Chennai",
-  "Coimbatore",
-  "Ernakulam",
-  "Goa",
-  "Hyderabad",
-  "Kannur",
-  "Kochi",
-  "Kozhikode",
-  "Madurai",
-  "Mangalore",
-  "Mumbai",
-  "Mysore",
-  "Pune",
-  "Thrissur",
-  "Trivandrum",
-];
+import { getTripLocationsAPI } from "../services/tripService";
 import MainLayout from "../components/layout/MainLayout";
 import FavoriteButton from "../components/common/FavoriteButton";
 import BusCard from "../components/bus/BusCard";
@@ -62,6 +44,20 @@ export default function SearchResultsPage() {
     sort: "recommended",
     busType: "all",
   });
+
+  const [locations, setLocations] = useState([]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const data = await getTripLocationsAPI();
+        setLocations(data);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const dropdownRef = useRef(null);
   const [activeField, setActiveField] = useState(null);
@@ -193,27 +189,32 @@ export default function SearchResultsPage() {
                 />
                 {activeField === "from" && (
                   <div className="absolute left-0 top-full z-[100] mt-2 max-h-60 w-full overflow-y-auto rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200">
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(filters.from.toLowerCase())
-                    ).map((city) => (
-                      <div
-                        key={city}
-                        onClick={() => {
-                          setFilters((p) => ({ ...p, from: city }));
-                          setActiveField(null);
-                        }}
-                        className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                      >
-                        {city}
-                      </div>
-                    ))}
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(filters.from.toLowerCase())
-                    ).length === 0 && (
-                      <div className="px-4 py-2 text-sm text-slate-500">
-                        No suggestions
-                      </div>
-                    )}
+                    {locations
+                      .map((l) => l.from)
+                      .filter((c) =>
+                        c.toLowerCase().includes(filters.from.toLowerCase())
+                      )
+                      .map((city) => (
+                        <div
+                          key={city}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFilters((p) => ({ ...p, from: city, to: "" }));
+                            setActiveField(null);
+                          }}
+                          className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                        >
+                          {city}
+                        </div>
+                      ))}
+                    {locations.length > 0 &&
+                      locations.filter((l) =>
+                        l.from.toLowerCase().includes(filters.from.toLowerCase())
+                      ).length === 0 && (
+                        <div className="px-4 py-2 text-sm text-slate-500">
+                          No suggestions
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
@@ -232,27 +233,47 @@ export default function SearchResultsPage() {
                 />
                 {activeField === "to" && (
                   <div className="absolute left-0 top-full z-[100] mt-2 max-h-60 w-full overflow-y-auto rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200">
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(filters.to.toLowerCase())
-                    ).map((city) => (
-                      <div
-                        key={city}
-                        onClick={() => {
-                          setFilters((p) => ({ ...p, to: city }));
-                          setActiveField(null);
-                        }}
-                        className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                      >
-                        {city}
-                      </div>
-                    ))}
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(filters.to.toLowerCase())
-                    ).length === 0 && (
-                      <div className="px-4 py-2 text-sm text-slate-500">
-                        No suggestions
-                      </div>
-                    )}
+                    {(() => {
+                      const fromValue = filters.from.trim().toLowerCase();
+                      const selectedFrom = locations.find(
+                        (l) => l.from.toLowerCase() === fromValue
+                      );
+
+                      let toCities = [];
+                      if (selectedFrom) {
+                        toCities = selectedFrom.to;
+                      } else {
+                        const allDestinations = new Set();
+                        locations.forEach(l => l.to.forEach(t => allDestinations.add(t)));
+                        toCities = Array.from(allDestinations);
+                      }
+
+                      const filteredTo = toCities.filter((c) =>
+                        c.toLowerCase().includes(filters.to.toLowerCase())
+                      );
+
+                      if (filteredTo.length === 0) {
+                        return (
+                          <div className="px-4 py-2 text-sm text-slate-500">
+                            {fromValue ? "No destinations found" : "No results"}
+                          </div>
+                        );
+                      }
+
+                      return filteredTo.map((city) => (
+                        <div
+                          key={city}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFilters((p) => ({ ...p, to: city }));
+                            setActiveField(null);
+                          }}
+                          className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                        >
+                          {city}
+                        </div>
+                      ));
+                    })()}
                   </div>
                 )}
               </div>

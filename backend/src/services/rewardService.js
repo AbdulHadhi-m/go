@@ -3,10 +3,7 @@ import Booking from "../models/bookingModel.js";
 import RewardTransaction from "../models/rewardTransactionModel.js";
 import { calculateRewardCoins } from "../utils/rewardUtils.js";
 
-/**
- * Issue reward coins for a completed booking
- * @param {string} bookingId - The ID of the completed booking
- */
+
 export const issueRewardForCompletedBooking = async (bookingId) => {
   try {
     const booking = await Booking.findById(bookingId);
@@ -67,12 +64,7 @@ export const issueRewardForCompletedBooking = async (bookingId) => {
   }
 };
 
-/**
- * Deduct reward coins when used for booking discount
- * @param {string} userId - User ID
- * @param {string} bookingId - Booking ID
- * @param {number} coinsToRedeem - Number of coins to deduct
- */
+
 export const redeemCoinsForBooking = async (userId, bookingId, coinsToRedeem) => {
   if (!coinsToRedeem || coinsToRedeem <= 0) return null;
 

@@ -8,25 +8,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-const SUGGESTED_CITIES = [
-  "Bangalore",
-  "Calicut",
-  "Chennai",
-  "Coimbatore",
-  "Ernakulam",
-  "Goa",
-  "Hyderabad",
-  "Kannur",
-  "Kochi",
-  "Kozhikode",
-  "Madurai",
-  "Mangalore",
-  "Mumbai",
-  "Mysore",
-  "Pune",
-  "Thrissur",
-  "Trivandrum",
-];
+import { getTripLocationsAPI } from "../../services/tripService";
 
 export default function HeroSection() {
   const navigate = useNavigate();
@@ -39,6 +21,20 @@ export default function HeroSection() {
     to: "",
     date: "",
   });
+
+  const [locations, setLocations] = useState([]);
+
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const data = await getTripLocationsAPI();
+        setLocations(data);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+    };
+    fetchLocations();
+  }, []);
 
   const handleChange = (e) => {
     setFormData((prev) => ({
@@ -134,27 +130,32 @@ export default function HeroSection() {
                 />
                 {activeField === "from" && (
                   <div className="absolute left-0 top-full z-[100] mt-2 max-h-60 w-full overflow-y-auto rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200">
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(formData.from.toLowerCase())
-                    ).map((city) => (
-                      <div
-                        key={city}
-                        onClick={() => {
-                          setFormData((p) => ({ ...p, from: city }));
-                          setActiveField(null);
-                        }}
-                        className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                      >
-                        {city}
-                      </div>
-                    ))}
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(formData.from.toLowerCase())
-                    ).length === 0 && (
-                      <div className="px-4 py-2 text-sm text-slate-500">
-                        No suggestions found
-                      </div>
-                    )}
+                    {locations
+                      .map((l) => l.from)
+                      .filter((c) =>
+                        c.toLowerCase().includes(formData.from.toLowerCase())
+                      )
+                      .map((city) => (
+                        <div
+                          key={city}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // Prevent input blur before state update
+                            setFormData((p) => ({ ...p, from: city, to: "" }));
+                            setActiveField(null);
+                          }}
+                          className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                        >
+                          {city}
+                        </div>
+                      ))}
+                    {locations.length > 0 &&
+                      locations.filter((l) =>
+                        l.from.toLowerCase().includes(formData.from.toLowerCase())
+                      ).length === 0 && (
+                        <div className="px-4 py-2 text-sm text-slate-500">
+                          No suggestions found
+                        </div>
+                      )}
                   </div>
                 )}
               </div>
@@ -198,27 +199,50 @@ export default function HeroSection() {
                 />
                 {activeField === "to" && (
                   <div className="absolute left-0 top-full z-[100] mt-2 max-h-60 w-full overflow-y-auto rounded-2xl bg-white p-2 shadow-xl ring-1 ring-slate-200">
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(formData.to.toLowerCase())
-                    ).map((city) => (
-                      <div
-                        key={city}
-                        onClick={() => {
-                          setFormData((p) => ({ ...p, to: city }));
-                          setActiveField(null);
-                        }}
-                        className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
-                      >
-                        {city}
-                      </div>
-                    ))}
-                    {SUGGESTED_CITIES.filter((c) =>
-                      c.toLowerCase().includes(formData.to.toLowerCase())
-                    ).length === 0 && (
-                      <div className="px-4 py-2 text-sm text-slate-500">
-                        No suggestions found
-                      </div>
-                    )}
+                    {(() => {
+                      const fromValue = formData.from.trim().toLowerCase();
+                      const selectedFrom = locations.find(
+                        (l) => l.from.toLowerCase() === fromValue
+                      );
+
+                      // If a departure is selected, show its specific destinations
+                      // Otherwise, show all unique destinations from all trips
+                      let toCities = [];
+                      if (selectedFrom) {
+                        toCities = selectedFrom.to;
+                      } else {
+                        // Fallback: all unique destinations
+                        const allDestinations = new Set();
+                        locations.forEach(l => l.to.forEach(t => allDestinations.add(t)));
+                        toCities = Array.from(allDestinations);
+                      }
+
+                      const filteredTo = toCities.filter((c) =>
+                        c.toLowerCase().includes(formData.to.toLowerCase())
+                      );
+
+                      if (filteredTo.length === 0) {
+                        return (
+                          <div className="px-4 py-2 text-sm text-slate-500">
+                            {fromValue ? `No destinations found from ${formData.from}` : "No destinations found"}
+                          </div>
+                        );
+                      }
+
+                      return filteredTo.map((city) => (
+                        <div
+                          key={city}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            setFormData((p) => ({ ...p, to: city }));
+                            setActiveField(null);
+                          }}
+                          className="cursor-pointer rounded-xl px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-100 hover:text-slate-900"
+                        >
+                          {city}
+                        </div>
+                      ));
+                    })()}
                   </div>
                 )}
               </div>

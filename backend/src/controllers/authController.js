@@ -26,9 +26,7 @@ const setTokenCookie = (res, token) => {
   });
 };
 
-// @desc Register user
-// @route POST /api/auth/register
-// @access Public
+
 export const registerUser = asyncHandler(async (req, res) => {
   const { error } = registerSchema.validate(req.body);
   if (error) {
@@ -91,9 +89,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc Login user
-// @route POST /api/auth/login
-// @access Public
+
 export const loginUser = asyncHandler(async (req, res) => {
   const { error } = loginSchema.validate(req.body);
   if (error) {
@@ -154,9 +150,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc Logout user
-// @route POST /api/auth/logout
-// @access Public
+
 export const logoutUser = asyncHandler(async (req, res) => {
   res.cookie("token", "", {
     httpOnly: true,
@@ -169,9 +163,7 @@ export const logoutUser = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc Get current user
-// @route GET /api/auth/me
-// @access Private
+
 export const getMe = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
@@ -179,9 +171,7 @@ export const getMe = asyncHandler(async (req, res) => {
   });
 });
 
-// @desc Google auth success
-// @route GET /api/auth/google/callback
-// @access Public
+
 export const googleAuthSuccess = asyncHandler(async (req, res) => {
   const token = generateToken(req.user._id);
   setTokenCookie(res, token);
@@ -195,9 +185,7 @@ export const googleAuthSuccess = asyncHandler(async (req, res) => {
   );
 });
 
-// @desc Google auth failure
-// @route GET /api/auth/google/failure
-// @access Public
+
 export const googleAuthFailure = asyncHandler(async (req, res) => {
   res.status(401).json({
     success: false,

@@ -2,22 +2,7 @@ import Notification from '../models/Notification.js';
 import { getIO } from '../config/socket.js';
 import { queueEmailNotification } from '../queues/notificationQueue.js';
 
-/**
- * Main unifying service to create and dispatch notifications across multiple channels
- *
- * @param {Object} params
- * @param {String} params.user - User ObjectId
- * @param {String} params.title - Notification title
- * @param {String} params.message - Notification message
- * @param {String} params.category - 'booking', 'account', 'offer', 'admin', 'system', 'engagement'
- * @param {String} [params.link] - Deep link URL
- * @param {Object} [params.metadata] - Extra context (e.g. { bookingId: '...' })
- * @param {Array} [params.deliveryChannels] - e.g. ['in-app', 'email']
- * @param {Object} [params.emailData] - Required if 'email' is in deliveryChannels
- * @param {String} params.emailData.to - Email address of the user
- * @param {String} params.emailData.templateType - Template to use (e.g. 'booking_confirmed')
- * @param {Number} [params.delayEmail] - Delay in milliseconds before sending email
- */
+
 export const createAndSendNotification = async ({
   user,
   title,

@@ -20,3 +20,8 @@ export const getTripSeatsAPI = async (tripId) => {
   const { data } = await axiosInstance.get(`/trips/${tripId}/seats`);
   return data;
 };
+
+export const getTripLocationsAPI = async () => {
+  const { data } = await axiosInstance.get(`/trips/locations`);
+  return data;
+};

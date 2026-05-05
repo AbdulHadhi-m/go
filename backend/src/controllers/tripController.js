@@ -66,3 +66,32 @@ export const getAvailableSeats = asyncHandler(async (req, res) => {
     bookedSeats: trip.bookedSeats,
   });
 });
+
+// @desc    Get all unique departure and destination locations
+// @route   GET /api/trips/locations
+// @access  Public
+export const getTripLocations = asyncHandler(async (req, res) => {
+  const trips = await Trip.find({
+    tripStatus: { $in: ["scheduled", "live"] },
+    journeyDate: { $gte: new Date(new Date().setHours(0, 0, 0, 0)) }
+  }, 'from to');
+
+  const locationsMap = {};
+
+  trips.forEach(trip => {
+    const from = trip.from.trim();
+    const to = trip.to.trim();
+    
+    if (!locationsMap[from]) {
+      locationsMap[from] = new Set();
+    }
+    locationsMap[from].add(to);
+  });
+
+  const response = Object.keys(locationsMap).map(from => ({
+    from,
+    to: Array.from(locationsMap[from])
+  }));
+
+  res.json(response);
+});
