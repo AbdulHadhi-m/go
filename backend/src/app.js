@@ -22,6 +22,7 @@ const app = express();
 
 const allowedOrigins = [
   process.env.CLIENT_URL,
+  "https://go-path-c6g3nens5-abdul-hadhis-projects-b9229bac.vercel.app",
   "http://localhost:5173",
 ];
 
